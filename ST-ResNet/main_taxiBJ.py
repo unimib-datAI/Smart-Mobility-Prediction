@@ -92,6 +92,14 @@ def cache(fname, X_train, Y_train, X_test, Y_test, external_dim, timestamp_train
     h5.create_dataset('T_test', data=timestamp_test)
     h5.close()
 
+# create folders if not exist
+if os.path.isdir(path_result) is False:
+    os.mkdir(path_result)
+if os.path.isdir(path_model) is False:
+    os.mkdir(path_model)
+if CACHEDATA and os.path.isdir(path_cache) is False:
+    os.mkdir(path_cache)
+
 # load data
 print("loading data...")
 ts = time.time()
