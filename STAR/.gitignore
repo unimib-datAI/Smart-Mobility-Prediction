@@ -77,9 +77,7 @@ docs/_build/
 # PyBuilder
 target/
 
-# IPython Notebook
-.ipynb_checkpoints
-*.ipynb
+
 # pyenv
 .python-version
 
