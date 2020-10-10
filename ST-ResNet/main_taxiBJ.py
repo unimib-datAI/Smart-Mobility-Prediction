@@ -19,7 +19,7 @@ np.random.seed(1337)  # for reproducibility
 # parameters
 DATAPATH = '../data'  # data path, you may set your own data path with the global envirmental variable DATAPATH
 CACHEDATA = True  # cache data or NOT
-path_cache = os.path.join(DATAPATH, 'CACHE')  # cache path
+path_cache = os.path.join(DATAPATH, 'CACHE', 'ST-ResNet')  # cache path
 nb_epoch = 500  # number of epoch at training stage
 nb_epoch_cont = 100  # number of epoch at training (cont) stage
 batch_size = 32  # batch size
@@ -54,7 +54,7 @@ def build_model(external_dim, save_model_pic=False):
     # model.summary()
     if (save_model_pic):
         from keras.utils.visualize_util import plot
-        plot(model, to_file='TaxiBJ_model.png', show_shapes=True)
+        plot(model, to_file='model.png', show_shapes=True)
     return model
 
 def read_cache(fname):
@@ -92,18 +92,10 @@ def cache(fname, X_train, Y_train, X_test, Y_test, external_dim, timestamp_train
     h5.create_dataset('T_test', data=timestamp_test)
     h5.close()
 
-# create folders if not exist
-if os.path.isdir(path_result) is False:
-    os.mkdir(path_result)
-if os.path.isdir(path_model) is False:
-    os.mkdir(path_model)
-if CACHEDATA and os.path.isdir(path_cache) is False:
-    os.mkdir(path_cache)
-
 # load data
 print("loading data...")
 ts = time.time()
-fname = os.path.join(DATAPATH, 'CACHE', 'TaxiBJ_C{}_P{}_T{}.h5'.format(
+fname = os.path.join(path_cache, 'TaxiBJ_C{}_P{}_T{}.h5'.format(
     len_closeness, len_period, len_trend))
 if os.path.exists(fname) and CACHEDATA:
     X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = read_cache(
