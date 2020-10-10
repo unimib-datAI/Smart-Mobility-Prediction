@@ -145,3 +145,46 @@ model.save_weights(os.path.join(
 pickle.dump((history.history), open(os.path.join(
     path_result, '{}.history.pkl'.format(hyperparams_name)), 'wb'))
 print("\nelapsed time (training): %.3f seconds\n" % (time.time() - ts))
+print('=' * 10)
+
+# TODO: da qui in poi mai testato
+print('evaluating using the model that has the best loss on the valid set')
+ts = time.time()
+model.load_weights(fname_param)
+score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[
+                        0] // 48, verbose=0)
+print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+score = model.evaluate(
+    X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+print("\nelapsed time (eval): %.3f seconds\n" % (time.time() - ts))
+
+print('=' * 10)
+print("training model (cont)...")
+ts = time.time()
+fname_param = os.path.join(
+    'MODEL', '{}.cont.best.h5'.format(hyperparams_name))
+model_checkpoint = ModelCheckpoint(
+    fname_param, monitor='rmse', verbose=0, save_best_only=True, mode='min')
+history = model.fit(X_train, Y_train, nb_epoch=nb_epoch_cont, verbose=1, batch_size=batch_size, callbacks=[
+                    model_checkpoint])
+pickle.dump((history.history), open(os.path.join(
+    path_result, '{}.cont.history.pkl'.format(hyperparams_name)), 'wb'))
+model.save_weights(os.path.join(
+    'MODEL', '{}_cont.h5'.format(hyperparams_name)), overwrite=True)
+print("\nelapsed time (training cont): %.3f seconds\n" % (time.time() - ts))
+
+print('=' * 10)
+print('evaluating using the final model')
+score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[
+                        0] // 48, verbose=0)
+print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+ts = time.time()
+score = model.evaluate(
+    X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+print("\nelapsed time (eval cont): %.3f seconds\n" % (time.time() - ts))
