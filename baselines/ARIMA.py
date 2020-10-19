@@ -1,46 +1,12 @@
 from copy import copy
 import numpy as np
-import h5py
 import os
 
 from pandas import read_csv
 from pandas import datetime
-from matplotlib import pyplot
 from statsmodels.tsa.arima_model import ARIMA
-from sklearn.metrics import mean_squared_error
-import math
 
-def load_stdata(fname):
-    f = h5py.File(fname, 'r')
-    data = f['data'].value
-    timestamps = f['date'].value
-    f.close()
-    return data, timestamps
-
-def remove_incomplete_days(data, timestamps, T=48):
-    # remove a certain day which has not 48 timestamps
-    days = []  # available days: some day only contain some seqs
-    days_incomplete = []
-    i = 0
-    while i < len(timestamps):
-        if int(timestamps[i][8:]) != 1:
-            i += 1
-        elif i+T-1 < len(timestamps) and int(timestamps[i+T-1][8:]) == T:
-            days.append(timestamps[i][:8])
-            i += T
-        else:
-            days_incomplete.append(timestamps[i][:8])
-            i += 1
-    print("incomplete days: ", days_incomplete)
-    days = set(days)
-    idx = []
-    for i, t in enumerate(timestamps):
-        if t[:8] in days:
-            idx.append(i)
-
-    data = data[idx]
-    timestamps = [timestamps[i] for i in idx]
-    return data, timestamps
+from utils import load_stdata, remove_incomplete_days, evaluate
 
 def arima_prediction(data, T, len_test):
     train_data, test_data = data[:len_test], data[-len_test:]
@@ -70,18 +36,6 @@ def arima_prediction(data, T, len_test):
                 print(f'flow {flow}, region {row}x{column}')
     
     return predicted_data
-
-def evaluate(real_data, predicted_data):
-    predicted_data_inflow = np.asarray([d[0].flatten() for d in predicted_data])
-    predicted_data_outflow = np.asarray([d[1].flatten() for d in predicted_data])
-
-    real_data_inflow = np.asarray([d[0].flatten() for d in real_data])
-    real_data_outflow = np.asarray([d[1].flatten() for d in real_data])
-
-    rmse_inflow = math.sqrt(mean_squared_error(real_data_inflow, predicted_data_inflow))
-    rmse_outflow = math.sqrt(mean_squared_error(real_data_outflow, predicted_data_outflow))
-    # mae = mean_absolute_error(real_data, data_predicted)
-    return rmse_inflow, rmse_outflow
 
 def arima_prediction_bikeNYC():
     DATAPATH = '../data'

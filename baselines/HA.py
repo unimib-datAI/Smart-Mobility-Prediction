@@ -1,42 +1,9 @@
 from copy import copy
 import numpy as np
-import h5py
 import os
 import datetime
-from sklearn.metrics import mean_squared_error,mean_absolute_error
-import math
 
-def load_stdata(fname):
-    f = h5py.File(fname, 'r')
-    data = f['data'].value
-    timestamps = f['date'].value
-    f.close()
-    return data, timestamps
-
-def remove_incomplete_days(data, timestamps, T=48):
-    # remove a certain day which has not 48 timestamps
-    days = []  # available days: some day only contain some seqs
-    days_incomplete = []
-    i = 0
-    while i < len(timestamps):
-        if int(timestamps[i][8:]) != 1:
-            i += 1
-        elif i+T-1 < len(timestamps) and int(timestamps[i+T-1][8:]) == T:
-            days.append(timestamps[i][:8])
-            i += T
-        else:
-            days_incomplete.append(timestamps[i][:8])
-            i += 1
-    print("incomplete days: ", days_incomplete)
-    days = set(days)
-    idx = []
-    for i, t in enumerate(timestamps):
-        if t[:8] in days:
-            idx.append(i)
-
-    data = data[idx]
-    timestamps = [timestamps[i] for i in idx]
-    return data, timestamps
+from utils import load_stdata, remove_incomplete_days, evaluate, plot_region_data
 
 def get_day_of_week(timestamp):
     date_string = timestamp.decode("utf-8")[:-2]
@@ -46,7 +13,12 @@ def get_day_of_week(timestamp):
 def ha_prediction(data, timestamps, T, len_test):
     num_timestamps = len(data)
 
+    # estraggo i dati di train. solo questi e le previsioni già effettuate
+    # vengono usate per predire i nuovi valori
+    train_data = list(data[:-len_test])
+
     predicted_data = []
+    # loop su tutti i timestamp del test_set
     for i in range(num_timestamps-len_test, num_timestamps):
         # prendo tutti i timestamps corrispondenti alla stessa ora e allo stesso giorno
         # e faccio la media. Problema: ci sono dei giorni mancanti nel dataset
@@ -63,30 +35,23 @@ def ha_prediction(data, timestamps, T, len_test):
 
         # possibile soluzione: converto il corrispondete timestamp in giorno della
         # settimana e vedo se corrisponde
+        # Ad esempio se T=24 e i=500, prendo i seguenti timestamp:
+        # [20, 44, 68, 92, 116, 140, 164, 188, 212, 236, 260, 284, 308, 332, 356, 380, 404, 428, 452, 476]
+        # e li considero solo se appartengono allo stesso giorno della settimana
+        # del timestamp i 
         current_day_of_week = get_day_of_week(timestamps[i])
         step = T
         start_idx = i % step
         historical_data = [
-            data[t] for t in range(start_idx, i, step) if get_day_of_week(timestamps[t]) == current_day_of_week
+            train_data[t] for t in range(start_idx, i, step) if get_day_of_week(timestamps[t]) == current_day_of_week
         ]
         prediction = np.mean(historical_data, axis=0).astype(int)
+        train_data.append(prediction)
         predicted_data.append(prediction)
 
     predicted_data = np.asarray(predicted_data)
     print('prediction shape: ' + str(predicted_data.shape))
     return predicted_data
-
-def evaluate(real_data, predicted_data):
-    predicted_data_inflow = np.asarray([d[0].flatten() for d in predicted_data])
-    predicted_data_outflow = np.asarray([d[1].flatten() for d in predicted_data])
-
-    real_data_inflow = np.asarray([d[0].flatten() for d in real_data])
-    real_data_outflow = np.asarray([d[1].flatten() for d in real_data])
-
-    rmse_inflow = math.sqrt(mean_squared_error(real_data_inflow, predicted_data_inflow))
-    rmse_outflow = math.sqrt(mean_squared_error(real_data_outflow, predicted_data_outflow))
-    # mae = mean_absolute_error(real_data, data_predicted)
-    return rmse_inflow, rmse_outflow
 
 def ha_prediction_taxiBJ():
     DATAPATH = '../data'
@@ -148,6 +113,8 @@ def ha_prediction_bikeNYC():
 
     print('BikeNYC rmse inflow: {rmse1}\nBikeNYC rmse outflow: {rmse2}'.format(rmse1=rmse_inflow, rmse2=rmse_outflow))
 
+    # plot real vs prediction data of a region
+    plot_region_data(real_data, predicted_data, (13,3), 0)
 
 if __name__ == '__main__':
     ha_prediction_taxiBJ()
