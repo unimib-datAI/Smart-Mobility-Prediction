@@ -1,0 +1,68 @@
+from keras.models import Model
+from keras.layers import (
+    Input,
+    Activation,
+    Flatten,
+    Dense,
+    Reshape,
+    Conv2D,
+    MaxPool2D,
+    BatchNormalization,
+    Add,
+    Conv2DTranspose
+)
+import numpy as np
+
+def my_conv(input_layer, filters, activation):
+    l = Conv2D(filters, (3,3), padding='same', activation=activation)(input_layer)
+    l = BatchNormalization()(l)
+    return l
+
+def my_conv_transpose(input_layer, skip_connection_layer):
+    l = Conv2DTranspose(input_layer.shape[-1], (2,2), (2,2))(input_layer)
+    l = Add()([l, skip_connection_layer])
+    l = Activation('relu')(l)
+    l = BatchNormalization()(l)
+    return l
+
+def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, encoder_blocks=3, filters=[32,64,64,16]):
+
+    #ENCODER
+    # input layer 32x32x14
+    input = Input(shape=((map_height, map_width, nb_flow * (len_c+len_p*2+len_t*2))))
+    x = input
+
+    # build encoder blocks
+    skip_connection_layers = []
+    for i in range(0, encoder_blocks):        
+        # conv + relu + bn
+        x = my_conv(x, filters[i], 'relu')
+        # append layer to skip connection list
+        skip_connection_layers.append(x)
+        # max pool
+        x = MaxPool2D()(x)
+
+    # last convolution 4x4x16
+    x = my_conv(x, filters[-1], 'relu')
+
+    # dense layer for bottleneck
+    vol = x.shape
+    x = Flatten()(x)
+    x = Dense(x.shape[1]/2, activation='relu')(x)
+
+    # DECODER
+    # simmetric dense layer and reshape 4x4x16
+    x = Dense(np.prod(vol[1:]), activation='relu')(x)
+    x = Reshape((vol[1], vol[2], vol[3]))(x)
+
+    # build decoder blocks
+    for i in reversed(range(0, encoder_blocks)):
+        # conv + relu + bn
+        x = my_conv(x, filters[i], 'relu')
+        # conv_transpose + skip_conn + relu + bn
+        x = my_conv_transpose(x, skip_connection_layers[i])
+
+    # last convolution + tanh + bn 32x32x2
+    output = my_conv(x, nb_flow, 'tanh')
+
+    return Model(input, output)
