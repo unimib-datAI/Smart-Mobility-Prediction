@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.metrics import mean_squared_error,mean_absolute_error
 import math
 from matplotlib import pyplot
+from keras import backend as K
 
 def load_stdata(fname):
     f = h5py.File(fname, 'r')
@@ -36,16 +37,31 @@ def remove_incomplete_days(data, timestamps, T=48):
     timestamps = [timestamps[i] for i in idx]
     return data, timestamps
 
+def mean_squared_error(y_true, y_pred):
+    return K.mean(K.square(y_pred - y_true))
+
+def rmse(y_true, y_pred):
+    return mean_squared_error(y_true, y_pred) ** 0.5
+
 def evaluate(real_data, predicted_data):
-    predicted_data_inflow = np.asarray([d[0].flatten() for d in predicted_data])
-    predicted_data_outflow = np.asarray([d[1].flatten() for d in predicted_data])
+    # predicted_data_inflow = np.asarray([d[0].flatten() for d in predicted_data])
+    # predicted_data_outflow = np.asarray([d[1].flatten() for d in predicted_data])
 
-    real_data_inflow = np.asarray([d[0].flatten() for d in real_data])
-    real_data_outflow = np.asarray([d[1].flatten() for d in real_data])
+    # real_data_inflow = np.asarray([d[0].flatten() for d in real_data])
+    # real_data_outflow = np.asarray([d[1].flatten() for d in real_data])
 
-    rmse_inflow = math.sqrt(mean_squared_error(real_data_inflow, predicted_data_inflow))
-    rmse_outflow = math.sqrt(mean_squared_error(real_data_outflow, predicted_data_outflow))
+    # rmse_inflow = math.sqrt(mean_squared_error(real_data_inflow, predicted_data_inflow))
+    # rmse_outflow = math.sqrt(mean_squared_error(real_data_outflow, predicted_data_outflow))
     # mae = mean_absolute_error(real_data, data_predicted)
+
+    predicted_data_inflow = np.asarray([d[0] for d in predicted_data])
+    predicted_data_outflow = np.asarray([d[1] for d in predicted_data])
+
+    real_data_inflow = np.asarray([d[0] for d in real_data])
+    real_data_outflow = np.asarray([d[1] for d in real_data])
+    
+    rmse_inflow = rmse(real_data_inflow, predicted_data_inflow)
+    rmse_outflow = rmse(real_data_outflow, predicted_data_outflow)
     return rmse_inflow, rmse_outflow
 
 def plot_region_data(real_data, predicted_data, region, flow):
