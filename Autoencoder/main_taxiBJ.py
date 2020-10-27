@@ -69,4 +69,4 @@ print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
 print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
 
 # build model
-model = build_model(len_closeness, len_period, len_trend, save_model_pic=False)
+model = build_model(len_closeness, len_period, len_trend, external_dim=external_dim save_model_pic=False)

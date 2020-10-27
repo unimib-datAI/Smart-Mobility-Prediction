@@ -3,6 +3,7 @@ from keras.layers import (
     Input,
     Activation,
     Flatten,
+    Concatenate,
     Dense,
     Reshape,
     Conv2D,
@@ -25,12 +26,25 @@ def my_conv_transpose(input_layer, skip_connection_layer):
     l = BatchNormalization()(l)
     return l
 
-def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, encoder_blocks=3, filters=[32,64,64,16]):
+def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16]):
 
+    main_inputs = []
     #ENCODER
     # input layer 32x32x14
     input = Input(shape=((map_height, map_width, nb_flow * (len_c+len_p*2+len_t*2))))
+    main_inputs.append(input)
     x = input
+
+    # merge external features
+    if external_dim != None and external_dim > 0:
+        # external input
+        external_input = Input(shape=(external_dim,))
+        main_inputs.append(external_input)
+        embedding = Dense(units=10, activation='relu')(external_input)
+        h1 = Dense(units=nb_flow*map_height * map_width, activation='relu')(embedding)
+        external_output = Reshape((map_height, map_width, nb_flow))(h1)
+        main_output = Concatenate(axis=3)([input, external_output])
+        x = main_output
 
     # build encoder blocks
     skip_connection_layers = []
@@ -65,4 +79,4 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, encode
     # last convolution + tanh + bn 32x32x2
     output = my_conv(x, nb_flow, 'tanh')
 
-    return Model(input, output)
+    return Model(main_inputs, output)
