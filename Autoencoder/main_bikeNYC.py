@@ -1,6 +1,7 @@
-from src import TaxiBJ
+from src import BikeNYC
 import numpy as np
 import time
+import math
 import os
 import pickle as pickle
 from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -9,28 +10,33 @@ from utils import cache, read_cache, build_model
 
 np.random.seed(1337)  # for reproducibility
 
-# PARAMETERS
-DATAPATH = '../data'  
-CACHEDATA = True  # cache data or NOT
-nb_epoch = 100 # number of epoch at training stage
-nb_epoch_cont =  100 # number of epoch at training (cont) stage
+# parameters
+DATAPATH = '../data' 
+nb_epoch = 60  # number of epoch at training stage
+# nb_epoch_cont = 150  # number of epoch at training (cont) stage
 batch_size = 16  # batch size
-T = 48  # number of time intervals in one day
-lr = 0.00015 # learning rate
+T = 24  # number of time intervals in one day
+CACHEDATA = True  # cache data or NOT
 
-len_closeness = 3 # length of closeness dependent sequence
-len_period = 1 # length of peroid dependent sequence
-len_trend = 1 # length of trend dependent sequence
-nb_flow = 2  # there are two types of flows: inflow and outflow
+lr = 0.00015  # learning rate
+len_closeness = 3  # length of closeness dependent sequence
+len_period = 1  # length of peroid dependent sequence
+len_trend = 1  # length of trend dependent sequence
+
+nb_flow = 2  # there are two types of flows: new-flow and end-flow
 # divide data into two subsets: Train & Test, of which the test set is the
-# last 4 weeks
-days_test = 7*4
+# last 10 days
+days_test = 10
 len_test = T*days_test
 len_val = 2*len_test
-map_height, map_width = 32, 32  # grid size
 
-path_log = 'log_BJ'
-muilt_step = False
+map_height, map_width = 16, 8  # grid size
+# For NYC Bike data, there are 81 available grid-based areas, each of
+# which includes at least ONE bike station. Therefore, we modify the final
+# RMSE by multiplying the following factor (i.e., factor).
+nb_area = 81
+m_factor = math.sqrt(1. * map_height * map_width / nb_area)
+# print('factor: ', m_factor)
 
 path_cache = os.path.join(DATAPATH, 'CACHE', 'Autoencoder')  # cache path
 path_result = 'RET'
@@ -43,12 +49,8 @@ if CACHEDATA and os.path.isdir(path_cache) is False:
     os.mkdir(path_cache)
 
 # load data
-if muilt_step:
-    dic_rmse={}
-    list_muilt_rmse=[]
 print("loading data...")
-ts = time.time()
-fname = os.path.join(path_cache, 'TaxiBJ_C{}_P{}_T{}.h5'.format(
+fname = os.path.join(path_cache, 'BikeNYC_C{}_P{}_T{}.h5'.format(
     len_closeness, len_period, len_trend))
 if os.path.exists(fname) and CACHEDATA:
     X_train_all, Y_train_all, X_train, Y_train, \
@@ -59,27 +61,29 @@ if os.path.exists(fname) and CACHEDATA:
 else:
     X_train_all, Y_train_all, X_train, Y_train, \
     X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = TaxiBJ.load_data(
+    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = BikeNYC.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
-        len_val=len_val, preprocess_name='preprocessing_bj.pkl', meta_data=True, meteorol_data=True, holiday_data=True, datapath=DATAPATH)
+        len_val=len_val, preprocess_name='preprocessing_nyc.pkl', meta_data=True, datapath=DATAPATH)
     if CACHEDATA:
         cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_test, Y_test,
               external_dim, timestamp_train_all, timestamp_train, timestamp_val, timestamp_test)
-i = 0
-print(external_dim)
+
 print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
-print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
 
 # build model
 model = build_model(
-    len_closeness, len_period, len_trend, external_dim=external_dim, lr=lr,
-    # save_model_pic='TaxiBJ_model'
+    len_closeness, len_period, len_trend, nb_flow, map_height, map_width,
+    external_dim=external_dim, lr=lr,
+    encoder_blocks=2,
+    filters=[32,64,16],
+    # save_model_pic='BikeNYC_model'
 )
-hyperparams_name = 'TaxiBJ.c{}.p{}.t{}.lr{}'.format(
+# model.summary()
+hyperparams_name = 'BikeNYC.c{}.p{}.t{}.lr{}'.format(
     len_closeness, len_period, len_trend, lr)
 fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
 
-early_stopping = EarlyStopping(monitor='val_rmse', patience=2, mode='min')
+early_stopping = EarlyStopping(monitor='val_rmse', patience=5, mode='min')
 model_checkpoint = ModelCheckpoint(
     fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
@@ -90,7 +94,8 @@ history = model.fit(X_train, Y_train,
                     epochs=nb_epoch,
                     batch_size=batch_size,
                     validation_data=(X_val,Y_val),
-                    callbacks=[early_stopping, model_checkpoint],
+                    # callbacks=[early_stopping, model_checkpoint],
+                    callbacks=[model_checkpoint],
                     verbose=2)
 model.save_weights(os.path.join(
     'MODEL', '{}.h5'.format(hyperparams_name)), overwrite=True)
