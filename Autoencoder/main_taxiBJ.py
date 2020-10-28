@@ -2,6 +2,8 @@ from src import TaxiBJ
 import numpy as np
 import time
 import os
+import pickle as pickle
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from utils import cache, read_cache, build_model 
 
@@ -69,4 +71,33 @@ print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
 print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
 
 # build model
-model = build_model(len_closeness, len_period, len_trend, external_dim=external_dim save_model_pic=False)
+model = build_model(len_closeness, len_period, len_trend, external_dim=external_dim, lr=lr, save_model_pic=False)
+hyperparams_name = 'TaxiBJ.c{}.p{}.t{}.lr{}'.format(
+    len_closeness, len_period, len_trend, lr)
+fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+
+early_stopping = EarlyStopping(monitor='val_rmse', patience=2, mode='min')
+model_checkpoint = ModelCheckpoint(
+    fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+
+# train model
+print("training model...")
+ts = time.time()
+history = model.fit(X_train, Y_train,
+                    epochs=nb_epoch,
+                    batch_size=batch_size,
+                    validation_data=(X_val,Y_val),
+                    callbacks=[early_stopping, model_checkpoint],
+                    verbose=2)
+model.save_weights(os.path.join(
+    'MODEL', '{}.h5'.format(hyperparams_name)), overwrite=True)
+pickle.dump((history.history), open(os.path.join(
+    path_result, '{}.history.pkl'.format(hyperparams_name)), 'wb'))
+print("\nelapsed time (training): %.3f seconds\n" % (time.time() - ts))
+
+# evaluate
+model.load_weights(fname_param)
+score = model.evaluate(
+    X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
