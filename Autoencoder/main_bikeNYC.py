@@ -1,4 +1,3 @@
-from src import BikeNYC
 import numpy as np
 import time
 import math
@@ -6,11 +5,14 @@ import os
 import pickle as pickle
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
+from src import BikeNYC, BikeNYC3d
 from utils import cache, read_cache, build_model 
 
 np.random.seed(1337)  # for reproducibility
 
 # parameters
+model = 'model3'
+
 DATAPATH = '../data' 
 nb_epoch = 60  # number of epoch at training stage
 # nb_epoch_cont = 150  # number of epoch at training (cont) stage
@@ -38,7 +40,8 @@ nb_area = 81
 m_factor = math.sqrt(1. * map_height * map_width / nb_area)
 # print('factor: ', m_factor)
 
-path_cache = os.path.join(DATAPATH, 'CACHE', 'Autoencoder')  # cache path
+cache_folder = 'Autoencoder/model3' if model_name == 'model3' else 'Autoencoder'
+path_cache = os.path.join(DATAPATH, 'CACHE', cache_folder)  # cache path
 path_result = 'RET'
 path_model = 'MODEL'
 if os.path.isdir(path_result) is False:
@@ -56,12 +59,16 @@ if os.path.exists(fname) and CACHEDATA:
     X_train_all, Y_train_all, X_train, Y_train, \
     X_val, Y_val, X_test, Y_test, mmn, external_dim, \
     timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = read_cache(
-        fname)
+        fname, 'preprocessing_nyc.pkl')
     print("load %s successfully" % fname)
 else:
+    if (model_name == 'model3'):
+        load_data = BikeNYC3d.load_data
+    else:
+        load_data = BikeNYC.load_data
     X_train_all, Y_train_all, X_train, Y_train, \
     X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = BikeNYC.load_data(
+    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
         len_val=len_val, preprocess_name='preprocessing_nyc.pkl', meta_data=True, datapath=DATAPATH)
     if CACHEDATA:
@@ -73,14 +80,15 @@ print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
 # build model
 model = build_model(
     len_closeness, len_period, len_trend, nb_flow, map_height, map_width,
+    model = model_name,
     external_dim=external_dim, lr=lr,
     encoder_blocks=2,
     filters=[32,64,16],
-    # save_model_pic='BikeNYC_model'
+    # save_model_pic=f'BikeNYC_{model_name}'
 )
 # model.summary()
-hyperparams_name = 'BikeNYC.c{}.p{}.t{}.lr{}'.format(
-    len_closeness, len_period, len_trend, lr)
+hyperparams_name = '{}.BikeNYC.c{}.p{}.t{}.lr{}'.format(
+    model_name, len_closeness, len_period, len_trend, lr)
 fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
 
 early_stopping = EarlyStopping(monitor='val_rmse', patience=5, mode='min')

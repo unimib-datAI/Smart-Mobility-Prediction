@@ -1,15 +1,16 @@
-from src import TaxiBJ
 import numpy as np
 import time
 import os
 import pickle as pickle
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
+from src import TaxiBJ, TaxiBJ3d
 from utils import cache, read_cache, build_model 
 
 np.random.seed(1337)  # for reproducibility
 
 # PARAMETERS
+model_name = 'model3'
 DATAPATH = '../data'  
 CACHEDATA = True  # cache data or NOT
 nb_epoch = 100 # number of epoch at training stage
@@ -32,7 +33,8 @@ map_height, map_width = 32, 32  # grid size
 path_log = 'log_BJ'
 muilt_step = False
 
-path_cache = os.path.join(DATAPATH, 'CACHE', 'Autoencoder')  # cache path
+cache_folder = 'Autoencoder/model3' if model_name == 'model3' else 'Autoencoder'
+path_cache = os.path.join(DATAPATH, 'CACHE', cache_folder)  # cache path
 path_result = 'RET'
 path_model = 'MODEL'
 if os.path.isdir(path_result) is False:
@@ -54,12 +56,16 @@ if os.path.exists(fname) and CACHEDATA:
     X_train_all, Y_train_all, X_train, Y_train, \
     X_val, Y_val, X_test, Y_test, mmn, external_dim, \
     timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = read_cache(
-        fname)
+        fname, 'preprocessing_bj.pkl')
     print("load %s successfully" % fname)
 else:
+    if (model_name == 'model3'):
+        load_data = TaxiBJ3d.load_data
+    else:
+        load_data = TaxiBJ.load_data
     X_train_all, Y_train_all, X_train, Y_train, \
     X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = TaxiBJ.load_data(
+    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
         len_val=len_val, preprocess_name='preprocessing_bj.pkl', meta_data=True, meteorol_data=True, holiday_data=True, datapath=DATAPATH)
     if CACHEDATA:
@@ -71,12 +77,12 @@ print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
 print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
 
 # build model
-model = build_model(
-    len_closeness, len_period, len_trend, external_dim=external_dim, lr=lr,
-    # save_model_pic='TaxiBJ_model'
-)
-hyperparams_name = 'TaxiBJ.c{}.p{}.t{}.lr{}'.format(
-    len_closeness, len_period, len_trend, lr)
+model = build_model(len_closeness, len_period, len_trend, model=model_name,
+                    external_dim=external_dim, lr=lr,
+                    # save_model_pic=f'TaxiBJ_{model_name}'
+                    )
+hyperparams_name = '{}.TaxiBJ.c{}.p{}.t{}.lr{}'.format(
+    model_name, len_closeness, len_period, len_trend, lr)
 fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
 
 early_stopping = EarlyStopping(monitor='val_rmse', patience=2, mode='min')

@@ -8,10 +8,11 @@ from keras.optimizers import Adam
 
 from src.model import my_model as m1
 from src.model2 import my_model as m2
+from src.model3 import my_model as m3
 import src.metrics as metrics
 
-def read_cache(fname):
-    mmn = pickle.load(open('preprocessing_bj.pkl', 'rb'))
+def read_cache(fname, preprocessing_fname):
+    mmn = pickle.load(open(preprocessing_fname, 'rb'))
 
     f = h5py.File(fname, 'r')
     num = int(f['num'].value)
@@ -63,6 +64,8 @@ def cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_tes
 def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, model='model1', encoder_blocks=3, filters=[32,64,64,16], lr=0.0001, save_model_pic=None):
     if (model == 'model2'):
         my_model = m2
+    elif (model == 'model3'):
+        my_model = m3
     else:
         my_model = m1
     
