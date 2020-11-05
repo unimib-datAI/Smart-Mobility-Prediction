@@ -9,6 +9,7 @@ from keras.optimizers import Adam
 from src.model import my_model as m1
 from src.model2 import my_model as m2
 from src.model3 import my_model as m3
+from src.model4 import my_model as m4
 import src.metrics as metrics
 
 def read_cache(fname, preprocessing_fname):
@@ -66,6 +67,8 @@ def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, ext
         my_model = m2
     elif (model == 'model3'):
         my_model = m3
+    elif (model == 'model4'):
+        my_model = m4
     else:
         my_model = m1
     
