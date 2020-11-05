@@ -125,8 +125,11 @@ def load_data(T=48, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
         _XC, _XP, _XT, _Y, _timestamps_Y = st.create_dataset(
             len_closeness=len_closeness, len_period=len_period, len_trend=len_trend)
 
-        _XCPT = np.concatenate((_XP, _XC),axis=1) # modificato per avere XPC
-        _XCPT = np.concatenate((_XT, _XCPT),axis=1) # modificato per avere XTPC
+        _XCPT = _XC
+        if (len_period > 0):
+            _XCPT = np.concatenate((_XP, _XC),axis=1) # modificato per avere XPC
+        if (len_trend > 0):
+            _XCPT = np.concatenate((_XT, _XCPT),axis=1) # modificato per avere XTPC
 
         XCPT.append(_XCPT)
 

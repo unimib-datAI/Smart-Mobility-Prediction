@@ -51,8 +51,11 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
         # _XCPT[:, 0:6, :, :] = _XC
         # _XCPT = np.zeros((_XC.shape[0], 2*(len_closeness+len_period+len_trend), 32, 32))
         print("_XC shape: ", _XC.shape, "_XP shape:", _XP.shape, "_XT shape:", _XT.shape)
-        _XCPT = np.concatenate((_XP, _XC),axis=1) # modificato per avere XPC
-        _XCPT = np.concatenate((_XT, _XCPT),axis=1) # modificato per avere XTPC
+        _XCPT = _XC
+        if (len_period > 0):
+            _XCPT = np.concatenate((_XP, _XC),axis=1) # modificato per avere XPC
+        if (len_trend > 0):
+            _XCPT = np.concatenate((_XT, _XCPT),axis=1) # modificato per avere XTPC
         # _XCPT = np.concatenate((_XCPT, _XT),axis=1)
         # print(_XCPT.shape)
     # XC = np.vstack(XC)
