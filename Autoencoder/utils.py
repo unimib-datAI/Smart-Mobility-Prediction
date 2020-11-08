@@ -10,6 +10,7 @@ from src.model import my_model as m1
 from src.model2 import my_model as m2
 from src.model3 import my_model as m3
 from src.model4 import my_model as m4
+from src.model5 import my_model as m5
 import src.metrics as metrics
 
 def read_cache(fname, preprocessing_fname):
