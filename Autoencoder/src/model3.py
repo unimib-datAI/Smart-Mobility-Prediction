@@ -1,3 +1,4 @@
+import tensorflow as tf
 from keras.models import Model
 from keras.layers import (
     Input,
@@ -13,6 +14,83 @@ from keras.layers import (
     LSTM,
     Add
 )
+
+class MultiplicativeUnit():
+    """Initialize the multiplicative unit.
+    Args:
+       layer_name: layer names for different multiplicative units.
+       filter_size: int tuple of the height and width of the filter.
+       num_hidden: number of units in output tensor.
+    """
+    def __init__(self, layer_name, num_hidden, filter_size):
+        self.layer_name = layer_name
+        self.num_features = num_hidden
+        self.filter_size = filter_size
+
+    def __call__(self, h, reuse=False):
+        with tf.compat.v1.variable_scope(self.layer_name, reuse=reuse):
+            g1 = Conv2D(
+                self.num_features, self.filter_size, padding='same', activation=tf.sigmoid,
+                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                )(h)
+            g2 = Conv2D(
+                self.num_features, self.filter_size, padding='same', activation=tf.sigmoid,
+                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                )(h)
+            g3 = Conv2D(
+                self.num_features, self.filter_size, padding='same', activation=tf.sigmoid,
+                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                )(h)
+            u = Conv2D(
+                self.num_features, self.filter_size, padding='same', activation=tf.tanh,
+                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                )(h)
+            g2_h = tf.multiply(g2, h)
+            g3_u = tf.multiply(g3, u)
+            mu = tf.multiply(g1, tf.tanh(g2_h + g3_u))
+            return mu
+
+class CMU():
+    """Initialize the causal multiplicative unit.
+    Args:
+       layer_name: layer names for different causal multiplicative unit.
+       filter_size: int tuple of the height and width of the filter.
+       num_hidden: number of units in output tensor.
+    """
+    def __init__(self, layer_name, num_hidden, filter_size):
+        self.layer_name = layer_name
+        self.num_features = num_hidden
+        self.filter_size = filter_size
+
+    def __call__(self, h1, h2, stride=False, reuse=False):
+        with tf.compat.v1.variable_scope(self.layer_name, reuse=reuse):
+            hl = MultiplicativeUnit('multiplicative_unit_1', self.num_features, self.filter_size)(h1, reuse=reuse)
+            if not stride:
+                hl = MultiplicativeUnit('multiplicative_unit_1', self.num_features, self.filter_size)(hl, reuse=True)
+            hr = MultiplicativeUnit('multiplicative_unit_2', self.num_features, self.filter_size)(h2, reuse=reuse)
+            h = tf.add(hl, hr)
+            h_sig = Conv2D(
+                self.num_features, self.filter_size, padding='same', activation=tf.sigmoid,
+                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                )(h)
+            h_tan = Conv2D(
+                self.num_features, self.filter_size, padding='same', activation=tf.tanh,
+                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                )(h)
+            h = tf.multiply(h_sig, h_tan)
+            return h
+
+def predcnn_perframe(xs, num_hidden, filter_size, input_length, reuse):
+    with tf.compat.v1.variable_scope('frame_prediction', reuse=reuse):
+        for i in range(input_length-1):
+            temp = []
+            for j in range(input_length-i-1):
+                h1 = xs[j]
+                h2 = xs[j+1]
+                h = CMU('causal_multiplicative_unit_'+str(i+1), num_hidden, filter_size)(h1, h2, stride=False, reuse=bool(temp))
+                temp.append(h)
+            xs = temp
+        return xs[0]
 
 def my_conv(input_layer, filters, activation, time_distributed=False):
     if (time_distributed):
@@ -43,7 +121,8 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, extern
     main_inputs = []
     #ENCODER
     # input layer tx32x32x2
-    input = Input(shape=((len_c+len_p+len_t, map_height, map_width, nb_flow)))
+    t = len_c+len_p+len_t
+    input = Input(shape=((t, map_height, map_width, nb_flow)))
     main_inputs.append(input)
     x = input
 
@@ -60,24 +139,10 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, extern
     # last convolution tx4x4x16
     x = my_conv(x, filters[-1], 'relu')
     s = x.shape
+    print(s)
 
-    x = TimeDistributed(Flatten())(x)
-    units = x.shape[-1]
-    x = LSTM(units, return_sequences=True)(x)
-    x = LSTM(units, return_sequences=True)(x)
-    x = LSTM(units, return_sequences=True)(x)
-    x = LSTM(units, return_sequences=False)(x)
-    x = Reshape((s[2:]))(x)
-
-    # build decoder blocks
-    for i in reversed(range(0, encoder_blocks)):
-        # conv + relu + bn
-        x = my_conv(x, filters[i], 'relu')
-        # conv_transpose + skip_conn + relu + bn
-        x = my_conv_transpose(x, skip_connection_layers[i])
-
-    # last convolution + tanh + bn 32x32x2
-    output = Conv2D(nb_flow, (3,3), padding='same')(x)
+    list_features = [x[:,i,:,:,:] for i in range(x.shape[1])]
+    x = predcnn_perframe(list_features, s[-1], (3,3), 4, reuse=False)
 
     # merge external features
     if external_dim != None and external_dim > 0:
@@ -85,10 +150,19 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, extern
         external_input = Input(shape=(external_dim,))
         main_inputs.append(external_input)
         embedding = Dense(units=10, activation='relu')(external_input)
-        h1 = Dense(units=nb_flow*map_height * map_width, activation='relu')(embedding)
-        external_output = Reshape((map_height, map_width, nb_flow))(h1)
-        output = Add()([external_output, output])
-    
-    output = Activation('tanh')(output)
+        h1 = Dense(units=s[2]*s[3]*s[4], activation='relu')(embedding)
+        external_output = Reshape((s[2], s[3], s[4]))(h1)
+        x = Add()([x, external_output])
+
+    # build decoder blocks
+    for i in reversed(range(0, encoder_blocks)):
+        # conv + relu + bn
+        x = my_conv(x, filters[i], 'relu')
+        print(x.shape)
+        # conv_transpose + skip_conn + relu + bn
+        x = my_conv_transpose(x, skip_connection_layers[i])
+
+    # last convolution + tanh + bn 32x32x2
+    output = my_conv(x, nb_flow, 'tanh')
 
     return Model(main_inputs, output)
