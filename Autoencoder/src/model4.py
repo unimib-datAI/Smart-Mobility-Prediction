@@ -16,7 +16,7 @@ from keras.layers import (
 )
 import numpy as np
 
-def my_conv(input_layer, filters, activation):
+def my_conv_lstm(input_layer, filters, activation):
     l = Conv2D(filters, (3,3), padding='same', activation=activation)(input_layer)
     s = l.shape
     l = Reshape((s[1]*s[2], s[3]))(l) # flatten first two dimensions
@@ -24,6 +24,11 @@ def my_conv(input_layer, filters, activation):
     l = LSTM(l.shape[-1], return_sequences=True)(l)
     l = Permute((2,1))(l)
     l = Reshape(s[1:])(l)
+    l = BatchNormalization()(l)
+    return l
+
+def my_conv(input_layer, filters, activation):
+    l = Conv2D(filters, (3,3), padding='same', activation=activation)(input_layer)
     l = BatchNormalization()(l)
     return l
 
@@ -64,7 +69,7 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, extern
     skip_connection_layers = []
     for i in range(0, encoder_blocks):        
         # conv + relu + bn
-        x = my_conv(x, filters[i], 'relu')
+        x = my_conv_lstm(x, filters[i], 'relu')
         # append layer to skip connection list
         skip_connection_layers.append(x)
         # max pool
