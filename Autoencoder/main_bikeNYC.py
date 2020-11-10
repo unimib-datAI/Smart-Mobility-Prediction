@@ -5,8 +5,23 @@ import os
 import pickle as pickle
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
+from utils import cache, read_cache
 from src import BikeNYC, BikeNYC3d
-from utils import cache, read_cache, build_model 
+from src import (
+    model as m1,
+    model2 as m2,
+    model3 as m3,
+    model4 as m4,
+    model5 as m5
+)
+
+models_dict = {
+    'model1': m1,
+    'model2': m2,
+    'model3': m3,
+    'model4': m4,
+    'model5': m5,
+}
 
 np.random.seed(1337)  # for reproducibility
 
@@ -78,7 +93,8 @@ else:
 print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
 
 # build model
-model = build_model(
+m = models_dict[model_name]
+model = m.build_model(
     len_closeness, len_period, len_trend, nb_flow, map_height, map_width,
     model = model_name,
     external_dim=external_dim, lr=lr,

@@ -14,6 +14,10 @@ from keras.layers import (
     LSTM,
     Add
 )
+from keras.optimizers import Adam
+import numpy as np
+
+import src.metrics as metrics
 
 class MultiplicativeUnit():
     """Initialize the multiplicative unit.
@@ -166,3 +170,13 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, extern
     output = my_conv(x, nb_flow, 'tanh')
 
     return Model(main_inputs, output)
+
+def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16], lr=0.0001, save_model_pic=None):
+    model = my_model(len_c, len_p, len_t, nb_flow, map_height, map_width, external_dim, encoder_blocks, filters)
+    adam = Adam(lr=lr)
+    model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
+    # model.summary()
+    if (save_model_pic):
+        from keras.utils.vis_utils import plot_model
+        plot_model(model, to_file=f'{save_model_pic}.png', show_shapes=True)
+    return model

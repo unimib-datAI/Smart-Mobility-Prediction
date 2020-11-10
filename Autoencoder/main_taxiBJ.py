@@ -4,8 +4,23 @@ import os
 import pickle as pickle
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
+from utils import cache, read_cache
 from src import TaxiBJ, TaxiBJ3d
-from utils import cache, read_cache, build_model 
+from src import (
+    model as m1,
+    model2 as m2,
+    model3 as m3,
+    model4 as m4,
+    model5 as m5
+)
+
+models_dict = {
+    'model1': m1,
+    'model2': m2,
+    'model3': m3,
+    'model4': m4,
+    'model5': m5,
+}
 
 np.random.seed(1337)  # for reproducibility
 
@@ -77,7 +92,8 @@ print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
 print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
 
 # build model
-model = build_model(len_closeness, len_period, len_trend, model=model_name,
+m = models_dict[model_name]
+model = m.build_model(len_closeness, len_period, len_trend, model=model_name,
                     external_dim=external_dim, lr=lr,
                     # save_model_pic=f'TaxiBJ_{model_name}'
                     )

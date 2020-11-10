@@ -4,14 +4,6 @@ import sys
 import pickle as pickle
 import time
 import h5py
-from keras.optimizers import Adam
-
-from src.model import my_model as m1
-from src.model2 import my_model as m2
-from src.model3 import my_model as m3
-from src.model4 import my_model as m4
-from src.model5 import my_model as m5
-import src.metrics as metrics
 
 def read_cache(fname, preprocessing_fname):
     mmn = pickle.load(open(preprocessing_fname, 'rb'))
@@ -62,22 +54,3 @@ def cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_tes
     h5.create_dataset('T_val', data=timestamp_val)
     h5.create_dataset('T_test', data=timestamp_test)
     h5.close()
-
-def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, model='model1', encoder_blocks=3, filters=[32,64,64,16], lr=0.0001, save_model_pic=None):
-    if (model == 'model2'):
-        my_model = m2
-    elif (model == 'model3'):
-        my_model = m3
-    elif (model == 'model4'):
-        my_model = m4
-    else:
-        my_model = m1
-    
-    model = my_model(len_c, len_p, len_t, nb_flow, map_height, map_width, external_dim, encoder_blocks, filters)
-    adam = Adam(lr=lr)
-    model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
-    # model.summary()
-    if (save_model_pic):
-        from keras.utils.vis_utils import plot_model
-        plot_model(model, to_file=f'{save_model_pic}.png', show_shapes=True)
-    return model
