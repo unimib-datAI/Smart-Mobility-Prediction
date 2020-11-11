@@ -97,6 +97,41 @@ def arima_prediction_taxiBJ():
 
     print('TaxiBJ rmse inflow: {rmse1}\nTaxiBJ rmse outflow: {rmse2}'.format(rmse1=rmse_inflow, rmse2=rmse_outflow))
 
+def arima_prediction_taxiNYC():
+    DATAPATH = '../data'
+    nb_flow = 2 # i.e. inflow and outflow
+    T = 48 # number timestamps per day
+    len_test = T * 4 * 7 # number of timestamps to predict (four weeks)
+
+    # load data
+    data_all = []
+    timestamps_all = list()
+    for year in range(10, 15):
+        fname = os.path.join(
+            DATAPATH, 'TaxiNYC', 'NYC{}_Taxi_M16x8_T60_InOut.h5'.format(year))
+        print("file name: ", fname)
+        data, timestamps = load_stdata(fname)
+        # print(timestamps)
+        # remove a certain day which does not have 48 timestamps
+        data, timestamps = remove_incomplete_days(data, timestamps, T, True)
+        data = data[:, :nb_flow]
+        data[data < 0] = 0.
+        data_all.append(data)
+        timestamps_all.append(timestamps)
+    timestamps_all = [timestamp for l in timestamps_all for timestamp in l]
+    data_all = np.vstack(copy(data_all))
+    print('data shape: ' + str(data_all.shape))
+
+    # make predictions
+    predicted_data = arima_prediction(data_all, timestamps_all, T, len_test)
+
+    # evaluate
+    real_data = data_all[-len_test:]
+    rmse_inflow, rmse_outflow = evaluate(real_data, predicted_data)
+
+    print('TaxiNYC rmse inflow: {rmse1}\TaxiNYC rmse outflow: {rmse2}'.format(rmse1=rmse_inflow, rmse2=rmse_outflow))
+
 if __name__ == '__main__':
     # arima_prediction_taxiBJ()
     arima_prediction_bikeNYC()
+    # arima_prediction_taxiNYC()

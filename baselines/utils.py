@@ -12,15 +12,17 @@ def load_stdata(fname):
     f.close()
     return data, timestamps
 
-def remove_incomplete_days(data, timestamps, T=48):
+def remove_incomplete_days(data, timestamps, T=48, h0_23=False):
     # remove a certain day which has not 48 timestamps
     days = []  # available days: some day only contain some seqs
     days_incomplete = []
     i = 0
+    first_timestamp_index = 0 if h0_23 else 1
+    last_timestamp_index = T-1 if h0_23 else T
     while i < len(timestamps):
-        if int(timestamps[i][8:]) != 1:
+        if int(timestamps[i][8:]) != first_timestamp_index:
             i += 1
-        elif i+T-1 < len(timestamps) and int(timestamps[i+T-1][8:]) == T:
+        elif i+T-1 < len(timestamps) and int(timestamps[i+T-1][8:]) == last_timestamp_index:
             days.append(timestamps[i][:8])
             i += T
         else:
