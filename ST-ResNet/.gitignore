@@ -1,9 +1,6 @@
 # data/model/results/scripts/backup
 *.sh
 *.bat
-*.h5
-*.hdf5
-*.pkl
 *.gz
 bak/
 backup/
