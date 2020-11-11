@@ -87,7 +87,7 @@ def mst3d(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_
     T - Trend
     external_dim
     '''
-
+    # NOTE: all lenghts must be equals
     # main input
     main_inputs = []
     outputs = []
@@ -98,7 +98,7 @@ def mst3d(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_
             
             # the first convolutional layer has 32 filters and kernel size of (2,3,3)
             # set stride to (2,1,1) to reduce depth
-            stride = (2,1,1)
+            stride = (1,1,1)
             nb_filters = 32
             conv1 = Conv3D(nb_filters, (2,3,3), padding='same', activation='relu', strides=stride)(input)
             maxPool1 = MaxPool3D((1,2,2))(conv1)
@@ -115,7 +115,7 @@ def mst3d(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_
             else:
               kernel_size = (1,3,3)
             if (dropout1.shape[1] > 2):
-              stride = (2,1,1)
+              stride = (1,1,1)
             else:
               stride = (1,1,1)
             
@@ -126,7 +126,7 @@ def mst3d(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_
             # print(dropout2.shape)
 
             if (dropout2.shape[1] > 2):
-              stride = (2,1,1)
+              stride = (1,1,1)
             else:
               stride = (1,1,1)
 
@@ -148,18 +148,20 @@ def mst3d(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_
         main_inputs.append(external_input)
         embedding = Dense(10)(external_input)
         embedding = Activation('relu')(embedding)
-        h1 = Dense(nb_filters * 2 * map_height/8 * map_width/8)(embedding)
+        h1 = Dense(nb_filters * len_c * map_height/8 * map_width/8)(embedding)
         activation = Activation('relu')(h1)
         main_output = Add()([flatten, activation])
 
     # reshape and tanh activation
-    # main_output = Dense(nb_flow * map_height * map_width)(main_output)
+    main_output = Dense(nb_flow * map_height * map_width)(main_output)
     main_output = Reshape((map_height, map_width, nb_flow))(main_output)
     main_output = Activation('tanh')(main_output)
 
     model = Model(main_inputs, main_output)
 
     return model
+
+
 
 def build_model(save_model_pic=False):
     model = mst3d(len_closeness, len_period, len_trend, nb_flow, map_height, map_width, external_dim)

@@ -2,21 +2,32 @@ from __future__ import print_function
 import os
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 from . import load_stdata
-from ..config import Config
-from ..utils import string2timestamp
+from ..utils import string2timestamp as s2t
 
+def my_s2t(strings, T=48):
+    timestamps = []
+
+    time_per_slot = 24.0 / T
+    num_per_T = T // 24
+    for t in strings:
+        year, month, day, slot = int(t[:4]), int(t[4:6]), int(t[6:8]), int(t[8:])
+        timestamps.append(pd.Timestamp(datetime(year, month, day, hour=int(slot * time_per_slot), minute=(slot % num_per_T) * int(60.0 * time_per_slot))))
+
+    return timestamps
 
 class STMatrix(object):
     """docstring for STMatrix"""
 
-    def __init__(self, data, timestamps, T=48, CheckComplete=True):
+    def __init__(self, data, timestamps, T=48, CheckComplete=True, Hours0_23=False):
         super(STMatrix, self).__init__()
         assert len(data) == len(timestamps)
         self.data = data
         self.timestamps = timestamps
         self.T = T
+        string2timestamp = my_s2t if Hours0_23 else s2t
         self.pd_timestamps = string2timestamp(timestamps, T=self.T)
         if CheckComplete:
             self.check_complete()
