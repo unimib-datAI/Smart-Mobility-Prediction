@@ -10,7 +10,6 @@ from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from deepst.models.STResNet import stresnet
-from deepst.config import Config
 import deepst.metrics as metrics
 from deepst.datasets import TaxiBJ
 
@@ -20,8 +19,8 @@ np.random.seed(1337)  # for reproducibility
 DATAPATH = '../data'  # data path, you may set your own data path with the global envirmental variable DATAPATH
 CACHEDATA = True  # cache data or NOT
 path_cache = os.path.join(DATAPATH, 'CACHE', 'ST-ResNet')  # cache path
-nb_epoch = 500  # number of epoch at training stage
-nb_epoch_cont = 100  # number of epoch at training (cont) stage
+nb_epoch = 100  # number of epoch at training stage
+# nb_epoch_cont = 100  # number of epoch at training (cont) stage
 batch_size = 32  # batch size
 T = 48  # number of time intervals in one day
 lr = 0.0002  # learning rate
@@ -54,11 +53,11 @@ def build_model(external_dim, save_model_pic=False):
     # model.summary()
     if (save_model_pic):
         from keras.utils.visualize_util import plot
-        plot(model, to_file='model.png', show_shapes=True)
+        plot(model, to_file='TaxiBJ_model.png', show_shapes=True)
     return model
 
 def read_cache(fname):
-    mmn = pickle.load(open('preprocessing.pkl', 'rb'))
+    mmn = pickle.load(open('preprocessing_taxibj.pkl', 'rb'))
 
     f = h5py.File(fname, 'r')
     num = int(f['num'].value)
@@ -104,7 +103,7 @@ if os.path.exists(fname) and CACHEDATA:
 else:
     X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = TaxiBJ.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
-        preprocess_name='preprocessing.pkl', meta_data=True, meteorol_data=False, holiday_data=False, datapath=DATAPATH)
+        preprocess_name='preprocessing_taxibj.pkl', meta_data=True, meteorol_data=False, holiday_data=False, datapath=DATAPATH)
     if CACHEDATA:
         cache(fname, X_train, Y_train, X_test, Y_test,
               external_dim, timestamp_train, timestamp_test)
