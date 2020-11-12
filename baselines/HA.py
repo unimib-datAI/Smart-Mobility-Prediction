@@ -119,7 +119,7 @@ def ha_prediction_bikeNYC():
 def ha_prediction_taxiNYC():
     DATAPATH = '../data'
     nb_flow = 2 # i.e. inflow and outflow
-    T = 48 # number timestamps per day
+    T = 24 # number timestamps per day
     len_test = T * 4 * 7 # number of timestamps to predict (four weeks)
 
     # load data
