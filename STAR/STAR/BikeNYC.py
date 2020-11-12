@@ -35,7 +35,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     for d in data_all:
         data_all_mmn.append(mmn.transform(d))
 
-    fpkl = open('preprocessing_nyc.pkl', 'wb')
+    fpkl = open(preprocess_name, 'wb')
     for obj in [mmn]:
         pickle.dump(obj, fpkl)
     fpkl.close()

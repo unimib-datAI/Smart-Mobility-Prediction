@@ -10,7 +10,8 @@ from keras.layers import (
     multiply,
     Dropout,
     ZeroPadding3D,
-    advanced_activations as aa
+    advanced_activations as aa,
+    LeakyReLU
 )
 from keras.layers import Conv2D, SeparableConv2D, GlobalAveragePooling2D, Conv3D, GlobalMaxPooling2D
 from keras.layers import BatchNormalization
@@ -34,7 +35,7 @@ def _shortcut(input, residual):
 def _bn_relu_conv(nb_filter, nb_row, nb_col, subsample=(1, 1), bn=False):
     def f(input):
         if bn:                                                                                                                                                                                                                                                                                                                                                                                                              
-            input = BatchNormalization(mode=0, axis=1)(input)
+            input = BatchNormalization(axis=1)(input)
         activation = Activation('relu')(input)
 
         return Conv2D(filters=nb_filter, kernel_size=(nb_row, nb_col), strides=subsample, 
@@ -55,8 +56,8 @@ def ResUnits2D(residual_unit, nb_filter, map_height=16, map_width=8, repetations
 
 def _residual_unit(nb_filter, init_subsample=(1, 1)):
     def f(input):
-        residual = _bn_relu_conv(nb_filter, 3, 3)(input)
-        residual = _bn_relu_conv(nb_filter, 3, 3)(residual)
+        residual = _bn_relu_conv(nb_filter, 3, 3, bn=True)(input)
+        residual = _bn_relu_conv(nb_filter, 3, 3, bn=True)(residual)
         return _shortcut(input, residual)
     return f
 
@@ -96,6 +97,7 @@ def STAR(c_conf=(3, 2, 32, 32), p_conf=(1, 2, 32, 32), t_conf=(1, 2, 32, 32), ex
     # [nb_residual_unit] Residual Units
     residual_output = ResUnits2D(_residual_unit, nb_filter=nb_filter,
                       repetations=nb_residual_unit)(conv1)
+    residual_output = BatchNormalization(axis=1)(residual_output)
     activation = Activation('relu')(residual_output)
 
     # conv2 = Conv2D(nb_filter, (3, 3), padding='same')(activation)
