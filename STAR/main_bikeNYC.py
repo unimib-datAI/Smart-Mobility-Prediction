@@ -8,16 +8,17 @@ import h5py
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint,TensorBoard, LearningRateScheduler
 from star.model import *
-from star.config import Config
 import star.metrics as metrics
 from star import BikeNYC
+
+# note: this code could not work without a GPU
 
 np.random.seed(1337)  # for reproducibility
 
 # parameters
 DATAPATH = '../data' 
-nb_epoch = 200  # number of epoch at training stage
-nb_epoch_cont = 150  # number of epoch at training (cont) stage
+nb_epoch = 100  # number of epoch at training stage
+# nb_epoch_cont = 150  # number of epoch at training (cont) stage
 batch_size = 16  # batch size
 T = 24  # number of time intervals in one day
 CACHEDATA = True  # cache data or NOT
@@ -163,16 +164,16 @@ for i in range(0,10):
     print('=' * 10)
     print("compiling model...")
 
-    lr_callback = LearningRateScheduler(lrschedule)
+    # lr_callback = LearningRateScheduler(lrschedule)
 
-    model = build_model(external_dim, save_model_pic=True)
+    model = build_model(external_dim, save_model_pic=False)
 
     hyperparams_name = 'BikeNYC.c{}.p{}.t{}.resunit{}.iter{}'.format(
         len_closeness, len_period, len_trend, nb_residual_unit, i)
     fname_param = os.path.join(path_model, '{}.best.h5'.format(hyperparams_name))
     print(hyperparams_name)
 
-    early_stopping = EarlyStopping(monitor='val_rmse', patience=4, mode='min')
+    early_stopping = EarlyStopping(monitor='val_rmse', patience=24, mode='min')
     model_checkpoint = ModelCheckpoint(
         fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
@@ -193,45 +194,12 @@ for i in range(0,10):
     print('evaluating using the model that has the best loss on the valid set')
 
     model.load_weights(fname_param)
-    score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[
-                            0] // 48, verbose=0)
-    print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
-
+    
     score = model.evaluate(
         X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+    # print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+    #       (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
     print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
+          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. ))
 
-    print('=' * 10)
-    print("training model (cont)...")
-    fname_param = os.path.join(
-        path_model, '{}.cont.best.h5'.format(hyperparams_name))
-    model_checkpoint = ModelCheckpoint(
-        fname_param, monitor='rmse', verbose=0, save_best_only=True, mode='min')
-    history = model.fit(X_train_all, Y_train_all,
-                        nb_epoch=nb_epoch_cont,
-                        verbose=2,
-                        batch_size=batch_size,
-                        callbacks=[lr_callback, model_checkpoint],
-                        validation_data=(X_test, Y_test))
-    pickle.dump((history.history), open(os.path.join(
-        path_result, '{}.cont.history.pkl'.format(hyperparams_name)), 'wb'))
-    model.save_weights(os.path.join(
-        path_model, '{}_cont.h5'.format(hyperparams_name)), overwrite=True)
-
-    print('=' * 10)
-    print('evaluating using the final model')
-    score = model.evaluate(X_train_all, Y_train_all, batch_size=Y_train.shape[
-                            0] // 48, verbose=0)
-    print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
-
-    score = model.evaluate(
-        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
-    print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
     # dic_rmse[hyperparams_name] = score[1] * (mmn._max - mmn._min) / 2. * m_factor
-# os.system('rm /home/suhan/wanghn/DeepST/data/CACHE/'+'BikeNYC_C{}_P{}_T{}.h5'.format(
-        # len_closeness, len_period, len_trend))
-# print(sorted(dic_rmse.items(), key=lambda item:item[1]))
