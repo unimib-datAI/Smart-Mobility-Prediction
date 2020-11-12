@@ -24,7 +24,7 @@ def _shortcut(input, residual):
 def _bn_relu_conv(nb_filter, nb_row, nb_col, subsample=(1, 1), bn=False):
     def f(input):
         if bn:
-            input = BatchNormalization()(input)
+            input = BatchNormalization(axis=1)(input)
         activation = Activation('relu')(input)
         return Conv2D(nb_filter, (nb_row, nb_col), subsample, padding="same")(activation)
     return f
@@ -32,8 +32,8 @@ def _bn_relu_conv(nb_filter, nb_row, nb_col, subsample=(1, 1), bn=False):
 
 def _residual_unit(nb_filter, init_subsample=(1, 1)):
     def f(input):
-        residual = _bn_relu_conv(nb_filter, 3, 3)(input)
-        residual = _bn_relu_conv(nb_filter, 3, 3)(residual)
+        residual = _bn_relu_conv(nb_filter, 3, 3, bn=True)(input)
+        residual = _bn_relu_conv(nb_filter, 3, 3, bn=True)(residual)
         return _shortcut(input, residual)
     return f
 
@@ -72,6 +72,7 @@ def stresnet(c_conf=(3, 2, 32, 32), p_conf=(3, 2, 32, 32), t_conf=(3, 2, 32, 32)
             residual_output = ResUnits(_residual_unit, nb_filter=64,
                               repetations=nb_residual_unit)(conv1)
             # Conv2
+            residual_output = BatchNormalization(axis=1)(residual_output)
             activation = Activation('relu')(residual_output)
             conv2 = Conv2D(
                 filters=nb_flow, kernel_size=(3,3), padding="same")(activation)
