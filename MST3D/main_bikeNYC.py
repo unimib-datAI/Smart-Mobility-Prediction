@@ -9,26 +9,15 @@ import math
 
 import tensorflow as tf
 from keras.optimizers import Adam
+from keras import backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.layers import (
-    Input,
-    Conv3D,
-    MaxPool3D,
-    Dropout,
-    Flatten,
-    Activation,
-    Add,
-    Dense,
-    Reshape,
-    BatchNormalization
-)
-from keras.models import Model
 
 import deepst.metrics as metrics
 from deepst.datasets import BikeNYC
+from deepst.model import mst3d_nyc
+from deepst.evaluation import evaluate
 
-
-np.random.seed(1337)  # for reproducibility
+# np.random.seed(1337)  # for reproducibility
 
 # parameters
 DATAPATH = '../data'
@@ -65,94 +54,8 @@ if os.path.isdir(path_model) is False:
 if CACHEDATA and os.path.isdir(path_cache) is False:
     os.mkdir(path_cache)
 
-
-# custom layer for branches fusion
-class LinearLayer(tf.keras.layers.Layer):
-  def __init__(self):
-    super(LinearLayer, self).__init__()
-    # self.num_outputs = num_outputs
-
-  def build(self, input_shape):
-    self.kernel1 = self.add_weight("kernel1", input_shape[0][1:])
-    self.kernel2 = self.add_weight("kernel2", input_shape[1][1:])
-    self.kernel3 = self.add_weight("kernel3", input_shape[2][1:])
-
-
-  def call(self, inputs):
-    return (
-        tf.math.multiply(inputs[0], self.kernel1)
-        + tf.math.multiply(inputs[1], self.kernel2)
-        + tf.math.multiply(inputs[2], self.kernel3)
-
-'''
-    MST3D implementation for BikeNYC
-'''
-def mst3d(len_c, len_p, len_t, nb_flow=2, map_height=16, map_width=8, external_dim=8):
-    '''
-    C - Temporal Closeness
-    P - Period
-    T - Trend
-    external_dim
-    '''
-
-    # main input
-    main_inputs = []
-    outputs = []
-    for len in [len_c, len_p, len_t]:
-        if len is not None:
-            input = Input(shape=(len, map_height, map_width, nb_flow))
-            main_inputs.append(input)
-            
-            # the first convolutional layer has 32 filters and kernel size of (2,3,3)
-            # set stride to (2,1,1) to reduce depth
-            stride = (1,1,1)
-            nb_filters = 32
-            kernel_size = (2,3,3)
-
-            conv1 = Conv3D(nb_filters, kernel_size, padding='same', activation='relu', strides=stride)(input)
-            maxPool1 = MaxPool3D((1,2,2))(conv1)
-            maxPool1 = BatchNormalization()(maxPool1)
-            dropout1 = Dropout(0.25)(maxPool1)
-            print(dropout1.shape)
-
-            # the second layers have 64 filters
-            nb_filters = 64
-            
-            conv2 = Conv3D(nb_filters, kernel_size, padding='same', activation='relu', strides=stride)(dropout1)
-            maxPool2 = MaxPool3D((1,2,2))(conv2)
-            maxPool2 = BatchNormalization()(maxPool2)
-            dropout2 = Dropout(0.25)(maxPool2)
-            print(dropout2.shape)
-
-            outputs.append(dropout2)
-
-    # parameter-matrix-based fusion
-    fusion = LinearLayer()(outputs)
-    flatten = Flatten()(fusion)
-
-    # fusing with external component
-    if external_dim != None and external_dim > 0:
-        # external input
-        external_input = Input(shape=(external_dim,))
-        main_inputs.append(external_input)
-        embedding = Dense(10)(external_input)
-        embedding = Activation('relu')(embedding)
-        # h1 = Dense(nb_filters * 2 * map_height/4 * map_width/4)(embedding)
-        h1 = Dense(flatten.shape[1])(embedding)
-        activation = Activation('relu')(h1)
-        main_output = Add()([flatten, activation])
-
-    # reshape and tanh activation
-    main_output = Dense(nb_flow * map_height * map_width)(main_output)
-    main_output = Reshape((map_height, map_width, nb_flow))(main_output)
-    main_output = Activation('tanh')(main_output)
-
-    model = Model(main_inputs, main_output)
-
-    return model
-
 def build_model(save_model_pic=False):
-    model = mst3d(len_closeness, len_period, len_trend, nb_flow, map_height, map_width, external_dim)
+    model = mst3d_nyc(len_closeness, len_period, len_trend, nb_flow, map_height, map_width, external_dim)
     adam = Adam(lr=lr)
     model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
     # model.summary()
@@ -162,7 +65,7 @@ def build_model(save_model_pic=False):
     return model
 
 def read_cache(fname):
-    mmn = pickle.load(open('preprocessing.pkl', 'rb'))
+    mmn = pickle.load(open('preprocessing_bikenyc.pkl', 'rb'))
 
     f = h5py.File(fname, 'r')
     num = int(f['num'].value)
@@ -209,7 +112,7 @@ if os.path.exists(fname) and CACHEDATA:
 else:
     X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = BikeNYC.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
-        preprocess_name='preprocessing.pkl', meta_data=True, datapath=DATAPATH)
+        preprocess_name='preprocessing_bikenyc.pkl', meta_data=True, datapath=DATAPATH)
     if CACHEDATA:
         cache(fname, X_train, Y_train, X_test, Y_test,
               external_dim, timestamp_train, timestamp_test)
@@ -219,46 +122,66 @@ print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
 
 print('=' * 10)
 
-# compile model
-print("compiling model...")
-print(
-    "**at the first time, it takes a few minites to compile if you use [Theano] as the backend**")
-ts = time.time()
-model = build_model(save_model_pic=True)
-hyperparams_name = 'BikeNYC.c{}.p{}.t{}.lr{}'.format(
-    len_closeness, len_period, len_trend, lr)
-fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+# training-test-evaluation iterations
+for i in range(0,10):
+    print('=' * 10)
+    print("compiling model...")
 
-early_stopping = EarlyStopping(monitor='val_rmse', patience=2, mode='min')
-model_checkpoint = ModelCheckpoint(
-    fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+    # lr_callback = LearningRateScheduler(lrschedule)
 
-print("\nelapsed time (compiling model): %.3f seconds\n" %
-      (time.time() - ts))
+    # build model
+    model = build_model(save_model_pic=False)
 
-print('=' * 10)
+    hyperparams_name = 'BikeNYC.c{}.p{}.t{}.iter{}'.format(
+        len_closeness, len_period, len_trend, i)
+    fname_param = os.path.join(path_model, '{}.best.h5'.format(hyperparams_name))
+    print(hyperparams_name)
 
-# train model
-print("training model...")
-ts = time.time()
-history = model.fit(X_train, Y_train,
-                    epochs=nb_epoch,
-                    batch_size=batch_size,
-                    validation_split=0.1,
-                    callbacks=[early_stopping, model_checkpoint],
-                    verbose=1)
-model.save_weights(os.path.join(
-    'MODEL', '{}.h5'.format(hyperparams_name)), overwrite=True)
-pickle.dump((history.history), open(os.path.join(
-    path_result, '{}.history.pkl'.format(hyperparams_name)), 'wb'))
-print("\nelapsed time (training): %.3f seconds\n" % (time.time() - ts))
-print('=' * 10)
+    early_stopping = EarlyStopping(monitor='val_rmse', patience=25, mode='min')
+    model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
-# evaluate
-print('evaluating using the model that has the best loss on the valid set')
+    print('=' * 10)
+    # train model
+    np.random.seed(i*18)
+    tf.random.set_seed(i*18)
+    print("training model...")
+    history = model.fit(X_train, Y_train,
+                        epochs=nb_epoch,
+                        batch_size=batch_size,
+                        validation_split=0.1,
+                        callbacks=[early_stopping, model_checkpoint],
+                        verbose=0)
+    model.save_weights(os.path.join(
+        path_model, '{}.h5'.format(hyperparams_name)), overwrite=True)
+    pickle.dump((history.history), open(os.path.join(
+        path_result, '{}.history.pkl'.format(hyperparams_name)), 'wb'))
 
-model.load_weights(fname_param)
-score = model.evaluate(
-    X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
-print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
+    print('=' * 10)
+
+    # evaluate model
+    print('evaluating using the model that has the best loss on the valid set')
+    model.load_weights(fname_param) # load best weights for current iteration
+    
+    Y_pred = model.predict(X_test) # compute predictions
+
+    score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1) # evaluate performance
+
+    # save to csv
+    csv_name = 'mst3d_bikeNYC_results.csv'
+    if not os.path.isfile(csv_name):
+        with open(csv_name, 'a', encoding = "utf-8") as file:
+            file.write('iteration,'
+                       'rsme_in,rsme_out,rsme_tot,'
+                       'mape_in,mape_out,mape_tot,'
+                       'ape_in,ape_out,ape_tot'
+                       )
+            file.write("\n")
+            file.close()
+    with open(csv_name, 'a', encoding = "utf-8") as file:
+        file.write(f'{i},{score[0]},{score[1]},{score[2]},{score[3]},'
+                   f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
+                  )
+        file.write("\n")
+        file.close()
+    K.clear_session()
