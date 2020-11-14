@@ -42,26 +42,27 @@ def _bn_relu_conv(nb_filter, nb_row, nb_col, subsample=(1, 1), bn=False):
                          kernel_regularizer=regularizers.l2(regularizers_l2), padding="same")(activation)                                                                                                                                                                                                                                        
     return f
 
-def ResUnits2D(residual_unit, nb_filter, map_height=16, map_width=8, repetations=1):
+def ResUnits2D(residual_unit, nb_filter, map_height=16, map_width=8, repetations=1, bn=False):
     def f(input):
         for i in range(repetations): 
             init_subsample = (1, 1)
             input = _residual_unit(nb_filter=nb_filter,
-                                  init_subsample=init_subsample)(input)
+                                  init_subsample=init_subsample,
+                                  bn=bn)(input)
             # y = cbam_block(y)                      
             # input = add([input, y])
 
         return input
     return f
 
-def _residual_unit(nb_filter, init_subsample=(1, 1)):
+def _residual_unit(nb_filter, init_subsample=(1, 1), bn=False):
     def f(input):
-        residual = _bn_relu_conv(nb_filter, 3, 3, bn=True)(input)
-        residual = _bn_relu_conv(nb_filter, 3, 3, bn=True)(residual)
+        residual = _bn_relu_conv(nb_filter, 3, 3, bn=bn)(input)
+        residual = _bn_relu_conv(nb_filter, 3, 3, bn=bn)(residual)
         return _shortcut(input, residual)
     return f
 
-def STAR(c_conf=(3, 2, 32, 32), p_conf=(1, 2, 32, 32), t_conf=(1, 2, 32, 32), external_dim=8, nb_residual_unit=3):
+def STAR(c_conf=(3, 2, 32, 32), p_conf=(1, 2, 32, 32), t_conf=(1, 2, 32, 32), external_dim=8, nb_residual_unit=3, bn=False):
     '''
     C - Temporal Closeness
     P - Period
@@ -96,8 +97,9 @@ def STAR(c_conf=(3, 2, 32, 32), p_conf=(1, 2, 32, 32), t_conf=(1, 2, 32, 32), ex
 
     # [nb_residual_unit] Residual Units
     residual_output = ResUnits2D(_residual_unit, nb_filter=nb_filter,
-                      repetations=nb_residual_unit)(conv1)
-    residual_output = BatchNormalization(axis=1)(residual_output)
+                      repetations=nb_residual_unit, bn=bn)(conv1)
+    if (bn):
+        residual_output = BatchNormalization(axis=1)(residual_output)
     activation = Activation('relu')(residual_output)
 
     # conv2 = Conv2D(nb_filter, (3, 3), padding='same')(activation)

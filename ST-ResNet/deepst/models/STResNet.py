@@ -30,25 +30,26 @@ def _bn_relu_conv(nb_filter, nb_row, nb_col, subsample=(1, 1), bn=False):
     return f
 
 
-def _residual_unit(nb_filter, init_subsample=(1, 1)):
+def _residual_unit(nb_filter, init_subsample=(1, 1), bn=False):
     def f(input):
-        residual = _bn_relu_conv(nb_filter, 3, 3, bn=True)(input)
-        residual = _bn_relu_conv(nb_filter, 3, 3, bn=True)(residual)
+        residual = _bn_relu_conv(nb_filter, 3, 3, bn=bn)(input)
+        residual = _bn_relu_conv(nb_filter, 3, 3, bn=bn)(residual)
         return _shortcut(input, residual)
     return f
 
 
-def ResUnits(residual_unit, nb_filter, repetations=1):
+def ResUnits(residual_unit, nb_filter, repetations=1, bn=False):
     def f(input):
         for i in range(repetations):
             init_subsample = (1, 1)
             input = residual_unit(nb_filter=nb_filter,
-                                  init_subsample=init_subsample)(input)
+                                  init_subsample=init_subsample,
+                                  bn=bn)(input)
         return input
     return f
 
 
-def stresnet(c_conf=(3, 2, 32, 32), p_conf=(3, 2, 32, 32), t_conf=(3, 2, 32, 32), external_dim=8, nb_residual_unit=3):
+def stresnet(c_conf=(3, 2, 32, 32), p_conf=(3, 2, 32, 32), t_conf=(3, 2, 32, 32), external_dim=8, nb_residual_unit=3, bn=False):
     '''
     C - Temporal Closeness
     P - Period
@@ -70,9 +71,10 @@ def stresnet(c_conf=(3, 2, 32, 32), p_conf=(3, 2, 32, 32), t_conf=(3, 2, 32, 32)
                 filters=64, kernel_size=(3,3), padding="same")(input)
             # [nb_residual_unit] Residual Units
             residual_output = ResUnits(_residual_unit, nb_filter=64,
-                              repetations=nb_residual_unit)(conv1)
+                              repetations=nb_residual_unit, bn=bn)(conv1)
             # Conv2
-            residual_output = BatchNormalization(axis=1)(residual_output)
+            if (bn):
+                residual_output = BatchNormalization(axis=1)(residual_output)
             activation = Activation('relu')(residual_output)
             conv2 = Conv2D(
                 filters=nb_flow, kernel_size=(3,3), padding="same")(activation)
