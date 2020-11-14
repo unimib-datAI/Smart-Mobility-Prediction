@@ -5,15 +5,18 @@ import numpy as np
 import math
 import h5py
 
+from keras import backend as K
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint,TensorBoard, LearningRateScheduler
+
 from star.model import *
 import star.metrics as metrics
 from star import BikeNYC
+from star.evaluation import evaluate
 
 # note: this code could not work without a GPU
 
-np.random.seed(1337)  # for reproducibility
+# np.random.seed(1337)  # for reproducibility
 
 # parameters
 DATAPATH = '../data' 
@@ -42,7 +45,7 @@ map_height, map_width = 16, 8  # grid size
 # RMSE by multiplying the following factor (i.e., factor).
 nb_area = 81
 m_factor = math.sqrt(1. * map_height * map_width / nb_area)
-print('factor: ', m_factor)
+# print('factor: ', m_factor)
 
 path_cache = os.path.join(DATAPATH, 'CACHE', 'STAR')  # cache path
 path_result = 'RET'
@@ -123,49 +126,39 @@ def cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_tes
     h5.create_dataset('T_test', data=timestamp_test)
     h5.close()
 
-def lrschedule(epoch):
-    if epoch <= 25:
-        return 0.0002
-    elif epoch <= 50:
-        return 0.00015
-    elif epoch <= 75:
-        return 0.0001
-    elif epoch <= 100:
-        return 0.00005
-    else: return 0.00001
+# load data
+print("loading data...")
+fname = os.path.join(path_cache, 'BikeNYC_C{}_P{}_T{}.h5'.format(
+    len_closeness, len_period, len_trend))
+if os.path.exists(fname) and CACHEDATA:
+    X_train_all, Y_train_all, X_train, Y_train, \
+    X_val, Y_val, X_test, Y_test, mmn, external_dim, \
+    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = read_cache(
+        fname)
+    print("load %s successfully" % fname)
+else:
+    X_train_all, Y_train_all, X_train, Y_train, \
+    X_val, Y_val, X_test, Y_test, mmn, external_dim, \
+    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = BikeNYC.load_data(
+        T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
+        len_val=len_val, preprocess_name='preprocessing_nyc.pkl', meta_data=True, datapath=DATAPATH)
+    if CACHEDATA:
+        cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_test, Y_test,
+                external_dim, timestamp_train_all, timestamp_train, timestamp_val, timestamp_test)
 
+print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
+mmn._max = 267
 
-tf.keras.backend.set_image_data_format('channels_first')
-tf.keras.backend.image_data_format()
-
-dic_rmse = {}
+# training-test-evaluation iterations
 for i in range(0,10):
-    print("loading data...")
-    fname = os.path.join(path_cache, 'BikeNYC_C{}_P{}_T{}.h5'.format(
-        len_closeness, len_period, len_trend))
-    if os.path.exists(fname) and CACHEDATA:
-        X_train_all, Y_train_all, X_train, Y_train, \
-        X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-        timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = read_cache(
-            fname)
-        print("load %s successfully" % fname)
-    else:
-        X_train_all, Y_train_all, X_train, Y_train, \
-        X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-        timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = BikeNYC.load_data(
-            T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
-            len_val=len_val, preprocess_name='preprocessing_nyc.pkl', meta_data=True, datapath=DATAPATH)
-        if CACHEDATA:
-            cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_test, Y_test,
-                  external_dim, timestamp_train_all, timestamp_train, timestamp_val, timestamp_test)
-
-    print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
-
     print('=' * 10)
     print("compiling model...")
 
     # lr_callback = LearningRateScheduler(lrschedule)
 
+    # build model
+    tf.keras.backend.set_image_data_format('channels_first')
+    tf.keras.backend.image_data_format()
     model = build_model(external_dim, save_model_pic=False)
 
     hyperparams_name = 'BikeNYC.c{}.p{}.t{}.resunit{}.iter{}'.format(
@@ -173,33 +166,52 @@ for i in range(0,10):
     fname_param = os.path.join(path_model, '{}.best.h5'.format(hyperparams_name))
     print(hyperparams_name)
 
-    early_stopping = EarlyStopping(monitor='val_rmse', patience=24, mode='min')
+    early_stopping = EarlyStopping(monitor='val_rmse', patience=25, mode='min')
     model_checkpoint = ModelCheckpoint(
         fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
     print('=' * 10)
+    # train model
+    np.random.seed(i*18)
+    tf.random.set_seed(i*18)
     print("training model...")
     history = model.fit(X_train, Y_train,
                         epochs=nb_epoch,
                         batch_size=batch_size,
                         validation_data=(X_val,Y_val),
                         callbacks=[early_stopping, model_checkpoint],
-                        verbose=2)
+                        verbose=0)
     model.save_weights(os.path.join(
         path_model, '{}.h5'.format(hyperparams_name)), overwrite=True)
     pickle.dump((history.history), open(os.path.join(
         path_result, '{}.history.pkl'.format(hyperparams_name)), 'wb'))
 
     print('=' * 10)
+
+    # evaluate model
     print('evaluating using the model that has the best loss on the valid set')
-
-    model.load_weights(fname_param)
+    model.load_weights(fname_param) # load best weights for current iteration
     
-    score = model.evaluate(
-        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
-    # print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-    #       (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
-    print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. ))
+    Y_pred = model.predict(X_test) # compute predictions
 
-    # dic_rmse[hyperparams_name] = score[1] * (mmn._max - mmn._min) / 2. * m_factor
+    score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1) # evaluate performance
+
+    # save to csv
+    csv_name = 'star_bikeNYC_results.csv'
+    if not os.path.isfile(csv_name):
+        with open(csv_name, 'a', encoding = "utf-8") as file:
+            file.write('iteration,'
+                       'rsme_in,rsme_out,rsme_tot,'
+                       'mape_in,mape_out,mape_tot,'
+                       'ape_in,ape_out,ape_tot'
+                       )
+            file.write("\n")
+            file.close()
+    with open(csv_name, 'a', encoding = "utf-8") as file:
+        file.write(f'{i},{score[0]},{score[1]},{score[2]},{score[3]},'
+                   f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
+                  )
+        file.write("\n")
+        file.close()
+    K.clear_session()
+

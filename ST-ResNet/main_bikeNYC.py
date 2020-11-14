@@ -6,13 +6,17 @@ import time
 import h5py
 import math
 
+import tensorflow as tf
+from keras import backend as K
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+
 from deepst.models.STResNet import stresnet
 import deepst.metrics as metrics
 from deepst.datasets import BikeNYC
+from deepst.evaluation import evaluate
 
-np.random.seed(1337)  # for reproducibility
+# np.random.seed(1337)  # for reproducibility
 
 # parameters
 DATAPATH = '../data'  # data path, you may set your own data path with the global envirmental variable DATAPATH
@@ -40,10 +44,15 @@ map_height, map_width = 16, 8  # grid size
 # RMSE by multiplying the following factor (i.e., factor).
 nb_area = 81
 m_factor = math.sqrt(1. * map_height * map_width / nb_area)
-print('factor: ', m_factor)
+# print('factor: ', m_factor)
 path_result = 'RET'
 path_model = 'MODEL'
-
+if os.path.isdir(path_result) is False:
+    os.mkdir(path_result)
+if os.path.isdir(path_model) is False:
+    os.mkdir(path_model)
+if CACHEDATA and os.path.isdir(path_cache) is False:
+    os.mkdir(path_cache)
 
 def build_model(external_dim, save_model_pic=False):
     c_conf = (len_closeness, nb_flow, map_height,
@@ -119,50 +128,66 @@ print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
 
 print('=' * 10)
 
-# compile model
-print("compiling model...")
-print(
-    "**at the first time, it takes a few minites to compile if you use [Theano] as the backend**")
-ts = time.time()
-model = build_model(external_dim)
-hyperparams_name = 'BikeNYC.c{}.p{}.t{}.resunit{}.lr{}'.format(
-    len_closeness, len_period, len_trend, nb_residual_unit, lr)
-fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+# training-test-evaluation iterations
+for i in range(0,10):
+    print('=' * 10)
+    print("compiling model...")
 
-early_stopping = EarlyStopping(monitor='val_rmse', patience=2, mode='min')
-model_checkpoint = ModelCheckpoint(
-    fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+    # lr_callback = LearningRateScheduler(lrschedule)
 
-print("\nelapsed time (compiling model): %.3f seconds\n" %
-      (time.time() - ts))
+    # build model
+    model = build_model(external_dim, save_model_pic=False)
 
-print('=' * 10)
+    hyperparams_name = 'BikeNYC.c{}.p{}.t{}.resunit{}.iter{}'.format(
+        len_closeness, len_period, len_trend, nb_residual_unit, i)
+    fname_param = os.path.join(path_model, '{}.best.h5'.format(hyperparams_name))
+    print(hyperparams_name)
 
-# train model
-print("training model...")
-ts = time.time()
-history = model.fit(X_train, Y_train,
-                    nb_epoch=nb_epoch,
-                    batch_size=batch_size,
-                    validation_split=0.1,
-                    callbacks=[early_stopping, model_checkpoint],
-                    verbose=1)
-model.save_weights(os.path.join(
-    'MODEL', '{}.h5'.format(hyperparams_name)), overwrite=True)
-pickle.dump((history.history), open(os.path.join(
-    path_result, '{}.history.pkl'.format(hyperparams_name)), 'wb'))
-print("\nelapsed time (training): %.3f seconds\n" % (time.time() - ts))
+    early_stopping = EarlyStopping(monitor='val_rmse', patience=25, mode='min')
+    model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
+    print('=' * 10)
+    # train model
+    np.random.seed(i*18)
+    tf.random.set_seed(i*18)
+    print("training model...")
+    history = model.fit(X_train, Y_train,
+                        epochs=nb_epoch,
+                        batch_size=batch_size,
+                        validation_split=0.1,
+                        callbacks=[early_stopping, model_checkpoint],
+                        verbose=0)
+    model.save_weights(os.path.join(
+        path_model, '{}.h5'.format(hyperparams_name)), overwrite=True)
+    pickle.dump((history.history), open(os.path.join(
+        path_result, '{}.history.pkl'.format(hyperparams_name)), 'wb'))
 
-# TODO: da qui in poi mai testato
-print('=' * 10)
-print('evaluating using the model that has the best loss on the valid set')
+    print('=' * 10)
 
-model.load_weights(fname_param)
+    # evaluate model
+    print('evaluating using the model that has the best loss on the valid set')
+    model.load_weights(fname_param) # load best weights for current iteration
+    
+    Y_pred = model.predict(X_test) # compute predictions
 
-score = model.evaluate(
-    X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
-# print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-#         (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
-print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+    score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1) # evaluate performance
+
+    # save to csv
+    csv_name = 'stresnet_bikeNYC_results.csv'
+    if not os.path.isfile(csv_name):
+        with open(csv_name, 'a', encoding = "utf-8") as file:
+            file.write('iteration,'
+                       'rsme_in,rsme_out,rsme_tot,'
+                       'mape_in,mape_out,mape_tot,'
+                       'ape_in,ape_out,ape_tot'
+                       )
+            file.write("\n")
+            file.close()
+    with open(csv_name, 'a', encoding = "utf-8") as file:
+        file.write(f'{i},{score[0]},{score[1]},{score[2]},{score[3]},'
+                   f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
+                  )
+        file.write("\n")
+        file.close()
+    K.clear_session()

@@ -6,14 +6,17 @@ import time
 import numpy as np
 import h5py
 
+import tensorflow as tf
+from keras import backend as K
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from deepst.models.STResNet import stresnet
 import deepst.metrics as metrics
 from deepst.datasets import TaxiBJ
+from deepst.evaluation import evaluate
 
-np.random.seed(1337)  # for reproducibility
+# np.random.seed(1337)  # for reproducibility
 
 # parameters
 DATAPATH = '../data'  # data path, you may set your own data path with the global envirmental variable DATAPATH
@@ -37,7 +40,12 @@ len_test = T * days_test
 map_height, map_width = 32, 32  # grid size
 path_result = 'RET'
 path_model = 'MODEL'
-
+if os.path.isdir(path_result) is False:
+    os.mkdir(path_result)
+if os.path.isdir(path_model) is False:
+    os.mkdir(path_model)
+if CACHEDATA and os.path.isdir(path_cache) is False:
+    os.mkdir(path_cache)
 
 def build_model(external_dim, save_model_pic=False):
     c_conf = (len_closeness, nb_flow, map_height,
@@ -93,7 +101,6 @@ def cache(fname, X_train, Y_train, X_test, Y_test, external_dim, timestamp_train
 
 # load data
 print("loading data...")
-ts = time.time()
 fname = os.path.join(path_cache, 'TaxiBJ_C{}_P{}_T{}.h5'.format(
     len_closeness, len_period, len_trend))
 if os.path.exists(fname) and CACHEDATA:
@@ -109,81 +116,68 @@ else:
               external_dim, timestamp_train, timestamp_test)
 
 print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
-print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
 print('=' * 10)
 
-# compile model
-print("compiling model...")
-print(
-    "**at the first time, it takes a few minites to compile if you use [Theano] as the backend**")
-ts = time.time()
-model = build_model(external_dim)
-hyperparams_name = 'TaxiBJ.c{}.p{}.t{}.resunit{}.lr{}'.format(
-    len_closeness, len_period, len_trend, nb_residual_unit, lr)
-fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+# training-test-evaluation iterations
+for i in range(0,10):
+    print('=' * 10)
+    print("compiling model...")
 
-early_stopping = EarlyStopping(monitor='val_rmse', patience=2, mode='min')
-model_checkpoint = ModelCheckpoint(
-    fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+    # lr_callback = LearningRateScheduler(lrschedule)
 
-print("\nelapsed time (compiling model): %.3f seconds\n" %
-      (time.time() - ts))
-print('=' * 10)
+    # build model
+    model = build_model(external_dim, save_model_pic=False)
 
-# train model
-print("training model...")
-ts = time.time()
-history = model.fit(X_train, Y_train,
-                    nb_epoch=nb_epoch,
-                    batch_size=batch_size,
-                    validation_split=0.1,
-                    callbacks=[early_stopping, model_checkpoint],
-                    verbose=1)
-model.save_weights(os.path.join(
-    'MODEL', '{}.h5'.format(hyperparams_name)), overwrite=True)
-pickle.dump((history.history), open(os.path.join(
-    path_result, '{}.history.pkl'.format(hyperparams_name)), 'wb'))
-print("\nelapsed time (training): %.3f seconds\n" % (time.time() - ts))
-print('=' * 10)
+    hyperparams_name = 'TaxiBJ.c{}.p{}.t{}.resunit{}.iter{}'.format(
+        len_closeness, len_period, len_trend, nb_residual_unit, i)
+    fname_param = os.path.join(path_model, '{}.best.h5'.format(hyperparams_name))
+    print(hyperparams_name)
 
-# TODO: da qui in poi mai testato
-print('evaluating using the model that has the best loss on the valid set')
-ts = time.time()
-model.load_weights(fname_param)
-score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[
-                        0] // 48, verbose=0)
-print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
-score = model.evaluate(
-    X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
-print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
-print("\nelapsed time (eval): %.3f seconds\n" % (time.time() - ts))
+    early_stopping = EarlyStopping(monitor='val_rmse', patience=25, mode='min')
+    model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
-print('=' * 10)
-print("training model (cont)...")
-ts = time.time()
-fname_param = os.path.join(
-    'MODEL', '{}.cont.best.h5'.format(hyperparams_name))
-model_checkpoint = ModelCheckpoint(
-    fname_param, monitor='rmse', verbose=0, save_best_only=True, mode='min')
-history = model.fit(X_train, Y_train, nb_epoch=nb_epoch_cont, verbose=1, batch_size=batch_size, callbacks=[
-                    model_checkpoint])
-pickle.dump((history.history), open(os.path.join(
-    path_result, '{}.cont.history.pkl'.format(hyperparams_name)), 'wb'))
-model.save_weights(os.path.join(
-    'MODEL', '{}_cont.h5'.format(hyperparams_name)), overwrite=True)
-print("\nelapsed time (training cont): %.3f seconds\n" % (time.time() - ts))
+    print('=' * 10)
+    # train model
+    np.random.seed(i*18)
+    tf.random.set_seed(i*18)
+    print("training model...")
+    history = model.fit(X_train, Y_train,
+                        epochs=nb_epoch,
+                        batch_size=batch_size,
+                        validation_split=0.1,
+                        callbacks=[early_stopping, model_checkpoint],
+                        verbose=0)
+    model.save_weights(os.path.join(
+        path_model, '{}.h5'.format(hyperparams_name)), overwrite=True)
+    pickle.dump((history.history), open(os.path.join(
+        path_result, '{}.history.pkl'.format(hyperparams_name)), 'wb'))
 
-print('=' * 10)
-print('evaluating using the final model')
-score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[
-                        0] // 48, verbose=0)
-print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
-ts = time.time()
-score = model.evaluate(
-    X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
-print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
-        (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
-print("\nelapsed time (eval cont): %.3f seconds\n" % (time.time() - ts))
+    print('=' * 10)
+
+    # evaluate model
+    print('evaluating using the model that has the best loss on the valid set')
+    model.load_weights(fname_param) # load best weights for current iteration
+    
+    Y_pred = model.predict(X_test) # compute predictions
+
+    score = evaluate(Y_test, Y_pred, mmn) # evaluate performance
+
+    # save to csv
+    csv_name = 'stresnet_taxiBJ_results.csv'
+    if not os.path.isfile(csv_name):
+        with open(csv_name, 'a', encoding = "utf-8") as file:
+            file.write('iteration,'
+                       'rsme_in,rsme_out,rsme_tot,'
+                       'mape_in,mape_out,mape_tot,'
+                       'ape_in,ape_out,ape_tot'
+                       )
+            file.write("\n")
+            file.close()
+    with open(csv_name, 'a', encoding = "utf-8") as file:
+        file.write(f'{i},{score[0]},{score[1]},{score[2]},{score[3]},'
+                   f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
+                  )
+        file.write("\n")
+        file.close()
+    K.clear_session()
