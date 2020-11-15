@@ -161,8 +161,10 @@ for i in range(0,10):
     score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1) # evaluate performance
 
     # save to csv
-    csv_name = 'mst3d_taxiBJ_results.csv'
+    csv_name = 'results\mst3d_taxiBJ_results.csv'
     if not os.path.isfile(csv_name):
+        if os.path.isdir('results') is False:
+            os.mkdir('results')
         with open(csv_name, 'a', encoding = "utf-8") as file:
             file.write('iteration,'
                        'rsme_in,rsme_out,rsme_tot,'
