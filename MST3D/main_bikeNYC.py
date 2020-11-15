@@ -168,7 +168,7 @@ for i in range(0,10):
     score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1) # evaluate performance
 
     # save to csv
-    csv_name = 'results\mst3d_bikeNYC_results.csv'
+    csv_name = os.path.join('results','mst3d_bikeNYC_results.csv')
     if not os.path.isfile(csv_name):
         if os.path.isdir('results') is False:
             os.mkdir('results')
