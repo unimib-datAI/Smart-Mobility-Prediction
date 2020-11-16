@@ -6,7 +6,7 @@ from pandas import read_csv
 from pandas import datetime
 from statsmodels.tsa.arima_model import ARIMA
 
-from utils import load_stdata, remove_incomplete_days, evaluate
+from utils import load_stdata, remove_incomplete_days, evaluate, save_to_csv
 
 def arima_prediction(data, T, len_test):
     train_data, test_data = data[:len_test], data[-len_test:]
@@ -58,10 +58,15 @@ def arima_prediction_bikeNYC():
     predicted_data = arima_prediction(data, T, len_test)
 
     # evaluate
+    print('Evaluating on BikeNYC')
     real_data = data[-len_test:]
-    rmse_inflow, rmse_outflow = evaluate(real_data, predicted_data)
+    score = evaluate(real_data, predicted_data)
 
-    print('BikeNYC rmse inflow: {rmse1}\nBikeNYC rmse outflow: {rmse2}'.format(rmse1=rmse_inflow, rmse2=rmse_outflow))
+    # plot real vs prediction data of a region
+    # plot_region_data(real_data, predicted_data, (13,3), 0)
+
+    # save to csv
+    save_to_csv('ARIMA', 'BikeNYC', score)
 
 def arima_prediction_taxiBJ():
     DATAPATH = '../data'
@@ -92,10 +97,12 @@ def arima_prediction_taxiBJ():
     predicted_data = arima_prediction(data_all, T, len_test)
 
     # evaluate
+    print('Evaluating on TaxiBJ')
     real_data = data_all[-len_test:]
-    rmse_inflow, rmse_outflow = evaluate(real_data, predicted_data)
+    score = evaluate(real_data, predicted_data)
 
-    print('TaxiBJ rmse inflow: {rmse1}\nTaxiBJ rmse outflow: {rmse2}'.format(rmse1=rmse_inflow, rmse2=rmse_outflow))
+    # save to csv
+    save_to_csv('Arima', 'TaxiBJ', score)
 
 def arima_prediction_taxiNYC():
     DATAPATH = '../data'
@@ -126,10 +133,12 @@ def arima_prediction_taxiNYC():
     predicted_data = arima_prediction(data_all, timestamps_all, T, len_test)
 
     # evaluate
+    print('Evaluating on TaxiNYC')
     real_data = data_all[-len_test:]
-    rmse_inflow, rmse_outflow = evaluate(real_data, predicted_data)
+    score = evaluate(real_data, predicted_data)
 
-    print('TaxiNYC rmse inflow: {rmse1}\TaxiNYC rmse outflow: {rmse2}'.format(rmse1=rmse_inflow, rmse2=rmse_outflow))
+    ## save to csv
+    save_to_csv('HA', 'TaxiNYC', score)
 
 if __name__ == '__main__':
     # arima_prediction_taxiBJ()

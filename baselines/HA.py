@@ -3,7 +3,9 @@ import numpy as np
 import os
 import datetime
 
-from utils import load_stdata, remove_incomplete_days, evaluate, plot_region_data
+from utils import (
+    load_stdata, remove_incomplete_days, evaluate, plot_region_data, save_to_csv
+)
 
 def get_day_of_week(timestamp):
     date_string = timestamp.decode("utf-8")[:-2]
@@ -82,10 +84,13 @@ def ha_prediction_taxiBJ():
     predicted_data = ha_prediction(data_all, timestamps_all, T, len_test)
 
     # evaluate
+    print('Evaluating on TaxiBJ')
     real_data = data_all[-len_test:]
-    rmse_inflow, rmse_outflow = evaluate(real_data, predicted_data)
+    score = evaluate(real_data, predicted_data)
 
-    print('TaxiBJ rmse inflow: {rmse1}\nTaxiBJ rmse outflow: {rmse2}'.format(rmse1=rmse_inflow, rmse2=rmse_outflow))
+    # save to csv
+    save_to_csv('HA', 'TaxiBJ', score)
+
 
 def ha_prediction_bikeNYC():
     DATAPATH = '../data'
@@ -108,13 +113,16 @@ def ha_prediction_bikeNYC():
     predicted_data = ha_prediction(data, timestamps, T, len_test)
 
     # evaluate
+    print('Evaluating on BikeNYC')
     real_data = data[-len_test:]
-    rmse_inflow, rmse_outflow = evaluate(real_data, predicted_data)
-
-    print('BikeNYC rmse inflow: {rmse1}\nBikeNYC rmse outflow: {rmse2}'.format(rmse1=rmse_inflow, rmse2=rmse_outflow))
+    score = evaluate(real_data, predicted_data)
 
     # plot real vs prediction data of a region
-    plot_region_data(real_data, predicted_data, (13,3), 0)
+    # plot_region_data(real_data, predicted_data, (13,3), 0)
+
+    # save to csv
+    save_to_csv('HA', 'BikeNYC', score)
+
 
 def ha_prediction_taxiNYC():
     DATAPATH = '../data'
@@ -145,10 +153,13 @@ def ha_prediction_taxiNYC():
     predicted_data = ha_prediction(data_all, timestamps_all, T, len_test)
 
     # evaluate
+    print('Evaluating on TaxiNYC')
     real_data = data_all[-len_test:]
-    rmse_inflow, rmse_outflow = evaluate(real_data, predicted_data)
+    score = evaluate(real_data, predicted_data)
 
-    print('TaxiNYC rmse inflow: {rmse1}\TaxiNYC rmse outflow: {rmse2}'.format(rmse1=rmse_inflow, rmse2=rmse_outflow))
+    ## save to csv
+    save_to_csv('HA', 'TaxiNYC', score)
+
 
 if __name__ == '__main__':
     ha_prediction_taxiBJ()

@@ -3,7 +3,11 @@ import numpy as np
 from sklearn.metrics import mean_squared_error,mean_absolute_error
 import math
 from matplotlib import pyplot
+import os
 from keras import backend as K
+from tensorflow.keras.metrics import (
+    MeanAbsolutePercentageError
+)
 
 def load_stdata(fname):
     f = h5py.File(fname, 'r')
@@ -39,32 +43,58 @@ def remove_incomplete_days(data, timestamps, T=48, h0_23=False):
     timestamps = [timestamps[i] for i in idx]
     return data, timestamps
 
+def split_flow(X):
+    inflow = X[:,0]
+    outflow = X[:,1]
+    return inflow, outflow
+
 def mean_squared_error(y_true, y_pred):
     return K.mean(K.square(y_pred - y_true))
 
 def rmse(y_true, y_pred):
     return mean_squared_error(y_true, y_pred) ** 0.5
 
-def evaluate(real_data, predicted_data):
-    # predicted_data_inflow = np.asarray([d[0].flatten() for d in predicted_data])
-    # predicted_data_outflow = np.asarray([d[1].flatten() for d in predicted_data])
+def mape(y_true, y_pred):
+    idx = y_true > 10
 
-    # real_data_inflow = np.asarray([d[0].flatten() for d in real_data])
-    # real_data_outflow = np.asarray([d[1].flatten() for d in real_data])
+    m = MeanAbsolutePercentageError()
+    m.update_state(y_true[idx], y_pred[idx])
+    return m.result().numpy()
+    # return np.mean(np.abs((y_true[idx] - y_pred[idx]) / y_true[idx])) * 100
 
-    # rmse_inflow = math.sqrt(mean_squared_error(real_data_inflow, predicted_data_inflow))
-    # rmse_outflow = math.sqrt(mean_squared_error(real_data_outflow, predicted_data_outflow))
-    # mae = mean_absolute_error(real_data, data_predicted)
+def ape(y_true, y_pred):
+    idx = y_true > 10
+    return np.sum(np.abs((y_true[idx] - y_pred[idx]) / y_true[idx])) * 100
 
-    predicted_data_inflow = np.asarray([d[0] for d in predicted_data])
-    predicted_data_outflow = np.asarray([d[1] for d in predicted_data])
+def evaluate(y_true, y_pred):
 
-    real_data_inflow = np.asarray([d[0] for d in real_data])
-    real_data_outflow = np.asarray([d[1] for d in real_data])
-    
-    rmse_inflow = rmse(real_data_inflow, predicted_data_inflow)
-    rmse_outflow = rmse(real_data_outflow, predicted_data_outflow)
-    return rmse_inflow, rmse_outflow
+    y_true_in, y_true_out = split_flow(y_true)
+    y_pred_in, y_pred_out = split_flow(y_pred)
+
+    score = []
+
+    score.append(rmse(y_true_in, y_pred_in))
+    score.append(rmse(y_true_out, y_pred_out))
+    score.append(rmse(y_true, y_pred))
+    score.append(mape(y_true_in, y_pred_in))
+    score.append(mape(y_true_out, y_pred_out))
+    score.append(mape(y_true, y_pred))
+    score.append(ape(y_true_in, y_pred_in))
+    score.append(ape(y_true_out, y_pred_out))
+    score.append(ape(y_true, y_pred))
+
+    print(
+        f'rmse_in: {score[0]}\n'
+        f'rmse_out: {score[1]}\n'
+        f'rmse_total: {score[2]}\n'
+        f'mape_in: {score[3]}\n'
+        f'mape_out: {score[4]}\n'
+        f'mape_total: {score[5]}\n'
+        f'ape_out: {score[6]}\n'
+        f'ape_out: {score[7]}\n'
+        f'ape_total: {score[8]}\n'
+    )
+    return score
 
 def plot_region_data(real_data, predicted_data, region, flow):
     # region deve essere una lista o tupla di 2 elementi
@@ -78,3 +108,22 @@ def plot_region_data(real_data, predicted_data, region, flow):
     pyplot.plot(predicted_data_region, color='red')
     pyplot.legend(['real', 'predicted'])
     pyplot.show()
+
+def save_to_csv(model_name, dataset_name, score):
+    csv_name = f'{model_name}_results.csv'
+    if not os.path.isfile(csv_name):
+        with open(csv_name, 'a', encoding = "utf-8") as file:
+            file.write(
+                'dataset,'
+                'rsme_in,rsme_out,rsme_tot,'
+                'mape_in,mape_out,mape_tot,'
+                'ape_in,ape_out,ape_tot'
+            )
+            file.write("\n")
+            file.close()
+    with open(csv_name, 'a', encoding = "utf-8") as file:
+        file.write(f'{dataset_name},{score[0]},{score[1]},{score[2]},{score[3]},'
+                f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
+                )
+        file.write("\n")
+        file.close()
