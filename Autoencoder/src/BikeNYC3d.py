@@ -34,7 +34,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     for d in data_all:
         data_all_mmn.append(mmn.transform(d))
 
-    fpkl = open('preprocessing_nyc.pkl', 'wb')
+    fpkl = open(preprocess_name, 'wb')
     for obj in [mmn]:
         pickle.dump(obj, fpkl)
     fpkl.close()
@@ -72,8 +72,8 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     # print("XC shape: ", XC.shape, "XP shape: ", XP.shape, "XT shape: ", XT.shape, "Y shape:", Y.shape)
 
     XCPT_train_all, Y_train_all = XCPT[:-len_test], Y[:-len_test]
-    XCPT_train, Y_train = XCPT[:-len_val], Y[:-len_val]
-    XCPT_val, Y_val = XCPT[-len_val:-len_test], Y[-len_val:-len_test]
+    XCPT_train, Y_train = XCPT_train_all[:-len_val], Y_train_all[:-len_val]
+    XCPT_val, Y_val = XCPT_train_all[-len_val:-len_test], Y_train_all[-len_val:-len_test]
     XCPT_test, Y_test = XCPT[-len_test:], Y[-len_test:]
     
     timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = timestamps_Y[:-len_test], timestamps_Y[:-len_val], timestamps_Y[-len_val:-len_test], timestamps_Y[-len_test:]
