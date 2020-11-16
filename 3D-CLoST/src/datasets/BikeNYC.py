@@ -7,7 +7,7 @@ import numpy as np
 from . import load_stdata
 from ..preprocessing import MinMaxNormalization
 from ..preprocessing import remove_incomplete_days
-
+from ..utils import create_dict, create_mask
 from .STMatrix import STMatrix
 from ..preprocessing import timestamp2vec
 # np.random.seed(1337)  # for reproducibility
@@ -25,6 +25,12 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     data, timestamps = remove_incomplete_days(data, timestamps, T)
     data = data[:, :nb_flow]
     data[data < 0] = 0.
+
+    # create mask
+    ny_dict = create_dict(data, timestamps)
+    mask = create_mask('NY', ny_dict)
+    mask = np.moveaxis(mask, 0, -1)
+
     data_all = [data]
     timestamps_all = [timestamps]
     # minmax_scale
@@ -103,4 +109,4 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     for _X in X_test:
         print(_X.shape, )
     print()
-    return X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_test, Y_test, mmn, metadata_dim, timestamp_train_all, timestamp_train, timestamp_val, timestamp_test
+    return X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_test, Y_test, mmn, metadata_dim, timestamp_train_all, timestamp_train, timestamp_val, timestamp_test, mask

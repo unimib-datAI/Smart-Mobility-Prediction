@@ -115,13 +115,15 @@ class STMatrix(object):
             timestamps_Y.append(self.timestamps[i])
             i += 1
         XC = np.asarray(XC)
-        # XC = np.moveaxis(XC, 2, -1) # new
+        XC = np.moveaxis(XC, 2, -1) # new
         XP = np.asarray(XP)
-        # XP = np.moveaxis(XP, 2, -1) # new
+        if (len_period > 0):
+            XP = np.moveaxis(XP, 2, -1) # new
         XT = np.asarray(XT)
-        # XT = np.moveaxis(XT, 2, -1) # new
+        if (len_trend > 0):
+            XT = np.moveaxis(XT, 2, -1) # new
         Y = np.asarray(Y)
-        # Y = np.moveaxis(Y, 1, -1) # new
+        Y = np.moveaxis(Y, 1, -1) # new
         print("XC shape: ", XC.shape, "XP shape: ", XP.shape, "XT shape: ", XT.shape, "Y shape:", Y.shape)
         return XC, XP, XT, Y, timestamps_Y
 

@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import time
 import os
-
+import numpy as np
 
 def timestamp_str_new(cur_timestampes, T=48):
     os.environ['TZ'] = 'Asia/Shanghai'
@@ -51,3 +51,30 @@ def timestamp2string(timestamps, T=48):
     return ["%s%02i" % (ts.strftime('%Y%m%d'),
                         int(1+ts.to_datetime().hour*num_per_T+ts.to_datetime().minute/(60 // num_per_T))) for ts in timestamps]
     # int(1+ts.to_datetime().hour*2+ts.to_datetime().minute/30)) for ts in timestamps]
+
+def create_dict(data, timestamps):
+
+    # Function that creates a dictionary with inflow (_End) or outflow (_Start) matrix for each timestamp.
+
+    ny_dict = {}
+    for index in range(len(data)):
+        ny_dict[str(timestamps[index]) + '_Inflow'] = data[index][0].tolist()
+        ny_dict[str(timestamps[index]) + '_Outflow'] = data[index][1].tolist()
+    return ny_dict
+
+def create_mask(city, city_dict):
+    if city == 'NY':
+        shape = (16, 8)
+    else:
+        shape = (32, 32)
+    sum_inflow = np.zeros(shape = shape)
+    sum_outflow = np.zeros(shape = shape)
+    for i in city_dict.keys():
+        if 'Inflow' in i:
+            sum_inflow += city_dict[i]
+        elif 'Outflow' in i:
+            sum_outflow += city_dict[i]
+    sum_outflow = np.array([0 if x == 0 else 1 for x in sum_outflow.flatten()]).reshape(shape)
+    sum_inflow = np.array([0 if x == 0 else 1 for x in sum_inflow.flatten()]).reshape(shape)
+
+    return np.array([sum_outflow, sum_inflow])
