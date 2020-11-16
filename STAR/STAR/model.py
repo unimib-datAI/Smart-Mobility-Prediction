@@ -62,7 +62,7 @@ def _residual_unit(nb_filter, init_subsample=(1, 1), bn=False):
         return _shortcut(input, residual)
     return f
 
-def STAR(c_conf=(3, 2, 32, 32), p_conf=(1, 2, 32, 32), t_conf=(1, 2, 32, 32), external_dim=8, nb_residual_unit=3, bn=False):
+def STAR(c_conf=(3, 2, 32, 32), p_conf=(1, 2, 32, 32), t_conf=(1, 2, 32, 32), external_dim=8, nb_residual_unit=3, bn=False, bn2=False):
     '''
     C - Temporal Closeness
     P - Period
@@ -98,7 +98,7 @@ def STAR(c_conf=(3, 2, 32, 32), p_conf=(1, 2, 32, 32), t_conf=(1, 2, 32, 32), ex
     # [nb_residual_unit] Residual Units
     residual_output = ResUnits2D(_residual_unit, nb_filter=nb_filter,
                       repetations=nb_residual_unit, bn=bn)(conv1)
-    if (bn):
+    if (bn2):
         residual_output = BatchNormalization(axis=1)(residual_output)
     activation = Activation('relu')(residual_output)
 

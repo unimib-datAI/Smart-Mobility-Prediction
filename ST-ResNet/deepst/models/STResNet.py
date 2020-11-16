@@ -49,7 +49,7 @@ def ResUnits(residual_unit, nb_filter, repetations=1, bn=False):
     return f
 
 
-def stresnet(c_conf=(3, 2, 32, 32), p_conf=(3, 2, 32, 32), t_conf=(3, 2, 32, 32), external_dim=8, nb_residual_unit=3, bn=False):
+def stresnet(c_conf=(3, 2, 32, 32), p_conf=(3, 2, 32, 32), t_conf=(3, 2, 32, 32), external_dim=8, nb_residual_unit=3, bn=False, bn2=False):
     '''
     C - Temporal Closeness
     P - Period
@@ -73,7 +73,7 @@ def stresnet(c_conf=(3, 2, 32, 32), p_conf=(3, 2, 32, 32), t_conf=(3, 2, 32, 32)
             residual_output = ResUnits(_residual_unit, nb_filter=64,
                               repetations=nb_residual_unit, bn=bn)(conv1)
             # Conv2
-            if (bn):
+            if (bn2):
                 residual_output = BatchNormalization(axis=1)(residual_output)
             activation = Activation('relu')(residual_output)
             conv2 = Conv2D(

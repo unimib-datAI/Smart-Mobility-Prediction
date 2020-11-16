@@ -51,7 +51,7 @@ if CACHEDATA and os.path.isdir(path_cache) is False:
     os.mkdir(path_cache)
 
 def build_model(len_c, len_p, len_t, nb_flow, map_height, map_width,
-                external_dim, nb_residual_unit, bn, save_model_pic=False, lr=0.00015):
+                external_dim, nb_residual_unit, bn, bn2=False, save_model_pic=False, lr=0.00015):
     c_conf = (len_c, nb_flow, map_height,
               map_width) if len_c > 0 else None
     p_conf = (len_p, nb_flow, map_height,
@@ -60,7 +60,7 @@ def build_model(len_c, len_p, len_t, nb_flow, map_height, map_width,
               map_width) if len_t > 0 else None
 
     model = stresnet(c_conf=c_conf, p_conf=p_conf, t_conf=t_conf,
-                     external_dim=external_dim, nb_residual_unit=nb_residual_unit, bn=True)
+                     external_dim=external_dim, nb_residual_unit=nb_residual_unit, bn=bn, bn2=bn2)
     adam = Adam(lr=lr)
     model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
     # model.summary()
@@ -153,6 +153,7 @@ for i in range(len(grid)):
         model = build_model(len_c, len_p, len_t, nb_flow, map_height,
                             map_width, external_dim, nb_res_unit,
                             bn=True,
+                            bn2=True,
                             save_model_pic=False,
                             lr=lr
                             )
