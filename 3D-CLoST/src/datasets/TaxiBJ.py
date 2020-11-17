@@ -11,6 +11,8 @@ import pickle
 from copy import copy
 import numpy as np
 import h5py
+
+from ..utils import create_dict, create_mask
 from . import load_stdata, stat
 from ..preprocessing import MinMaxNormalization, remove_incomplete_days, timestamp2vec
 from .STMatrix import STMatrix
@@ -98,6 +100,14 @@ def load_data(T=48, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
         data_all.append(data)
         timestamps_all.append(timestamps)
         print("\n")
+
+    # create mask
+    bj_dict = create_dict(
+        np.vstack(copy(data_all)), # all data in one array
+        [item for sublist in timestamps_all for item in sublist] # all timestamps in one list
+    )
+    mask = create_mask('BJ', bj_dict)
+    mask = np.moveaxis(mask, 0, -1)
 
     # minmax_scale
     data_train = np.vstack(copy(data_all))[:-len_test]
@@ -201,5 +211,5 @@ def load_data(T=48, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     for _X in X_test:
         print(_X.shape, )
     print()
-    return X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_test, Y_test, mmn, metadata_dim, timestamp_train_all, timestamp_train, timestamp_val, timestamp_test
+    return X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_test, Y_test, mmn, metadata_dim, timestamp_train_all, timestamp_train, timestamp_val, timestamp_test, mask
 

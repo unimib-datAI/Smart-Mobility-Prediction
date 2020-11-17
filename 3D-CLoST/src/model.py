@@ -57,7 +57,7 @@ def CLoST3D(city, X_train, y_train,
       main_inputs.append(external_input)
       x_ext = Dense(units=10, activation='relu')(external_input)
       x_ext = Dense(units=reduce(lambda e1, e2: e1*e2, y_train.shape[1:]), activation='relu')(x_ext)
-      x = Flatten()(x)
+      # x = Flatten()(x)
       x = Concatenate(axis = -1)([x, x_ext])
     x = Dense(reduce(lambda e1, e2: e1*e2, y_train.shape[1:]))(x)
     x = Reshape(y_train.shape[1:])(x)
