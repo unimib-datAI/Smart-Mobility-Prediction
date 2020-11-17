@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 
 from . import load_stdata
-from ..preprocessing import MinMaxNormalization
+from ..preprocessing.minmax_normalization import MinMaxNormalization_01
 from ..preprocessing import remove_incomplete_days
 from ..utils import create_dict, create_mask
 from .STMatrix import STMatrix
@@ -36,7 +36,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     # minmax_scale
     data_train = data[:-len_test]
     print('train_data shape: ', data_train.shape)
-    mmn = MinMaxNormalization()
+    mmn = MinMaxNormalization_01()
     mmn.fit(data_train)
     data_all_mmn = []
     for d in data_all:
@@ -89,8 +89,8 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     if meta_data:
         meta_feature = timestamp2vec(timestamps_Y)
         metadata_dim = meta_feature.shape[1]
-        meta_feature_train_all, meta_feature_train, meta_feature_val, meta_feature_test = meta_feature[
-        :-len_test], meta_feature[:-len_val], meta_feature[-len_val:-len_test], meta_feature[-len_test:]
+        meta_feature_train_all =  meta_feature[:-len_test]
+        meta_feature_train, meta_feature_val, meta_feature_test = meta_feature_train_all[:-len_val], meta_feature[-len_val:-len_test], meta_feature[-len_test:]
         X_train_all.append(meta_feature_train_all)  
         X_train.append(meta_feature_train)
         X_val.append(meta_feature_val)

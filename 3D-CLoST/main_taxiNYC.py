@@ -141,7 +141,7 @@ for i in range(len(grid)):
         score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1) # evaluate performance
 
         # save to csv
-        csv_name = os.path.join('results','3DCLoST_bikeNYC_results.csv')
+        csv_name = os.path.join('results','3DCLoST_taxiNYC_results.csv')
         if not os.path.isfile(csv_name):
             if os.path.isdir('results') is False:
                 os.mkdir('results')

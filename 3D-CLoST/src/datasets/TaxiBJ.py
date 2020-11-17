@@ -14,7 +14,8 @@ import h5py
 
 from ..utils import create_dict, create_mask
 from . import load_stdata, stat
-from ..preprocessing import MinMaxNormalization, remove_incomplete_days, timestamp2vec
+from ..preprocessing import remove_incomplete_days, timestamp2vec
+from ..preprocessing.minmax_normalization import MinMaxNormalization_01
 from .STMatrix import STMatrix
 # np.random.seed(1337)  # for reproducibility
 
@@ -112,7 +113,7 @@ def load_data(T=48, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     # minmax_scale
     data_train = np.vstack(copy(data_all))[:-len_test]
     print('train_data shape: ', data_train.shape)
-    mmn = MinMaxNormalization()
+    mmn = MinMaxNormalization_01()
     mmn.fit(data_train)
     data_all_mmn = [mmn.transform(d) for d in data_all]
 
@@ -192,8 +193,8 @@ def load_data(T=48, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
               'meteorol feature: ', meteorol_feature.shape, 'mete feature: ', meta_feature.shape)
 
     if metadata_dim is not None:
-        meta_feature_train_all, meta_feature_train, meta_feature_val, meta_feature_test = meta_feature[
-            :-len_test], meta_feature[:-len_val], meta_feature[-len_val:-len_test], meta_feature[-len_test:]
+        meta_feature_train_all =  meta_feature[:-len_test]
+        meta_feature_train, meta_feature_val, meta_feature_test = meta_feature_train_all[:-len_val], meta_feature[-len_val:-len_test], meta_feature[-len_test:]
         
         X_train_all.append(meta_feature_train_all)  
         X_train.append(meta_feature_train)
