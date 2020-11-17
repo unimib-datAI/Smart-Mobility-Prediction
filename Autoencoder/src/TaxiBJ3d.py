@@ -187,8 +187,8 @@ def load_data(T=48, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
               'meteorol feature: ', meteorol_feature.shape, 'mete feature: ', meta_feature.shape)
 
     if metadata_dim is not None:
-        meta_feature_train_all, meta_feature_train, meta_feature_val, meta_feature_test = meta_feature[
-            :-len_test], meta_feature[:-len_val], meta_feature[-len_val:-len_test], meta_feature[-len_test:]
+        meta_feature_train_all =  meta_feature[:-len_test]
+        meta_feature_train, meta_feature_val, meta_feature_test = meta_feature_train_all[:-len_val], meta_feature[-len_val:-len_test], meta_feature[-len_test:]
         
         X_train_all.append(meta_feature_train_all)  
         X_train.append(meta_feature_train)
