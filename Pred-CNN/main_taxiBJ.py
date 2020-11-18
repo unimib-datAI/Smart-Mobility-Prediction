@@ -7,12 +7,11 @@ import h5py
 
 import tensorflow as tf
 from keras import backend as K
-from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from src.net.model import build_model
 import src.metrics as metrics
-from src.datasets import BikeNYC
+from src.datasets import TaxiBJ
 from src.evaluation import evaluate
 from cache_utils import cache, read_cache
 
@@ -21,7 +20,7 @@ DATAPATH = '../data'
 nb_epoch = 100  # number of epoch at training stage
 # nb_epoch_cont = 150  # number of epoch at training (cont) stage
 batch_size = 16  # batch size
-T = 24  # number of time intervals in one day
+T = 48  # number of time intervals in one day
 CACHEDATA = True  # cache data or NOT
 
 lr = 0.0001  # learning rate
@@ -31,24 +30,15 @@ len_t = 0  # length of trend dependent sequence
 input_length = len_c + len_p + len_t
 num_hidden = 64
 filter_size = (3,3)
-encoder_length = 2
-decoder_length = 3
+encoder_length = 4
+decoder_length = 6
 
-
-nb_flow = 2  # there are two types of flows: new-flow and end-flow
-# divide data into two subsets: Train & Test, of which the test set is the
-# last 10 days
-days_test = 10
+nb_flow = 2  
+days_test = 7*4
 len_test = T*days_test
 len_val = 2*len_test
 
-map_height, map_width = 16, 8  # grid size
-# For NYC Bike data, there are 81 available grid-based areas, each of
-# which includes at least ONE bike station. Therefore, we modify the final
-# RMSE by multiplying the following factor (i.e., factor).
-nb_area = 81
-m_factor = math.sqrt(1. * map_height * map_width / nb_area)
-# print('factor: ', m_factor)
+map_height, map_width = 32, 32
 
 path_cache = os.path.join(DATAPATH, 'CACHE', 'Pred-CNN')  # cache path
 path_result = 'RET'
@@ -62,8 +52,8 @@ if CACHEDATA and os.path.isdir(path_cache) is False:
 
 # load data
 print("loading data...")
-preprocess_name = 'preprocessing_bikenyc.pkl'
-fname = os.path.join(path_cache, 'BikeNYC_C{}_P{}_T{}.h5'.format(
+preprocess_name = 'preprocessing_taxibj.pkl'
+fname = os.path.join(path_cache, 'TaxiBJ_C{}_P{}_T{}.h5'.format(
     len_c, len_p, len_t))
 if os.path.exists(fname) and CACHEDATA:
     X_train_all, Y_train_all, X_train, Y_train, \
@@ -74,7 +64,7 @@ if os.path.exists(fname) and CACHEDATA:
 else:
     X_train_all, Y_train_all, X_train, Y_train, \
     X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = BikeNYC.load_data(
+    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = TaxiBJ.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_c, len_period=len_p, len_trend=len_t, len_test=len_test,
         len_val=len_val, preprocess_name=preprocess_name, meta_data=True, datapath=DATAPATH)
     if CACHEDATA:
@@ -92,7 +82,7 @@ for i in range(0,10):
     model = build_model(input_length, map_height, map_width, nb_flow, encoder_length,
                         decoder_length, num_hidden, filter_size, lr)
 
-    hyperparams_name = 'BikeNYC.c{}.p{}.t{}.iter{}'.format(
+    hyperparams_name = 'TaxiBJ.c{}.p{}.t{}.iter{}'.format(
         len_c, len_p, len_t, i)
     fname_param = os.path.join(path_model, '{}.best.h5'.format(hyperparams_name))
     print(hyperparams_name)
@@ -129,7 +119,7 @@ for i in range(0,10):
     score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1) # evaluate performance
 
     # save to csv
-    csv_name = os.path.join('results','PredCNN_bikeNYC_results.csv')
+    csv_name = os.path.join('results','PredCNN_taxiBJ_results.csv')
     if not os.path.isfile(csv_name):
         if os.path.isdir('results') is False:
             os.mkdir('results')
