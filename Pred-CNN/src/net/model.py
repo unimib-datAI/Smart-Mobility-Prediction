@@ -3,18 +3,18 @@ from keras.layers import Input, Conv2D
 from keras.models import Model
 from keras.optimizers import Adam
 
-from layers.ResidualMultiplicativeBlock import ResidualMultiplicativeBlock as rmb
-from layers.CascadeMultiplicativeUnit import CascadeMultiplicativeUnit as cmu
+from src.layers.ResidualMultiplicativeBlock import ResidualMultiplicativeBlock as rmb
+from src.layers.CascadeMultiplicativeUnit import CascadeMultiplicativeUnit as cmu
+import src.metrics as metrics
 
 
-def predcnn(params, mask_true, num_hidden, filter_size, seq_length=20, input_length=10):
-    encoder_length = params['encoder_length']
-    decoder_length = params['decoder_length']
-    map_height = params['map_height']
-    map_width = params['map_width']
-    channels = params['channels']
+# def predcnn(params, mask_true, num_hidden, filter_size, seq_length=20, input_length=10):
+def predcnn(input_length, map_height, map_width, channels=2, encoder_length=2,
+            decoder_length=3, num_hidden=64, filter_size=(3,3)):
+    
+    seq_length = input_length + 1 # next frame prediction
 
-    with tf.variable_scope('predcnn'):
+    with tf.compat.v1.variable_scope('predcnn'):
         # encoder
         main_input = Input(shape=(input_length, map_height, map_width, channels))
         encoder_output = []
@@ -47,17 +47,18 @@ def predcnn(params, mask_true, num_hidden, filter_size, seq_length=20, input_len
 
 
 def resolution_preserving_cnn_encoders(x, num_hidden, filter_size, encoder_length, reuse):
-    with tf.variable_scope('resolution_preserving_cnn_encoders', reuse=reuse):
+    with tf.compat.v1.variable_scope('resolution_preserving_cnn_encoders', reuse=reuse):
         x = Conv2D(num_hidden, filter_size, padding='same', activation=None,
                   #  kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                   name='input_conv')(x)
+                  #  name='input_conv'
+                  )(x)
         for i in range(encoder_length):
             x = rmb('residual_multiplicative_block_'+str(i+1), num_hidden // 2, filter_size)(x)
         return x
 
 
 def predcnn_perframe(xs, num_hidden, filter_size, input_length, reuse):
-    with tf.variable_scope('frame_prediction', reuse=reuse):
+    with tf.compat.v1.variable_scope('frame_prediction', reuse=reuse):
         for i in range(input_length-1):
             temp = []
             for j in range(input_length-i-1):
@@ -70,10 +71,26 @@ def predcnn_perframe(xs, num_hidden, filter_size, input_length, reuse):
 
 
 def cnn_docoders(x, num_hidden, filter_size, output_channels, decoder_length, reuse):
-    with tf.variable_scope('cnn_decoders', reuse=reuse):
+    with tf.compat.v1.variable_scope('cnn_decoders', reuse=reuse):
         for i in range(decoder_length):
             x = rmb('residual_multiplicative_block_'+str(i+1), num_hidden // 2, filter_size)(x)
         x = Conv2D(output_channels, filter_size, padding='same',
                   #  kernel_initializer=tf.contrib.layers.xavier_initializer(),
-                   name='output_conv')(x)
+                  #  name='output_conv'
+                   )(x)
         return x
+
+
+def build_model(input_length, map_height, map_width, channels=2, encoder_length=2,
+                decoder_length=3, num_hidden=64, filter_size=(3,3),lr=0.0001,
+                save_model_pic=None):
+
+    model = predcnn(input_length, map_height, map_width, channels, encoder_length,
+            decoder_length, num_hidden, filter_size)
+    adam = Adam(lr=lr)
+    model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
+    # model.summary()
+    if (save_model_pic):
+        from keras.utils.vis_utils import plot_model
+        plot_model(model, to_file=f'{save_model_pic}.png', show_shapes=True)
+    return model

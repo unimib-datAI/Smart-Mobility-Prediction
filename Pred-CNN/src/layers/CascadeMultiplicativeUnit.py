@@ -1,6 +1,6 @@
 import tensorflow as tf
 from keras.layers import Conv2D
-from layers.MultiplicativeUnit import MultiplicativeUnit
+from src.layers.MultiplicativeUnit import MultiplicativeUnit
 
 
 class CascadeMultiplicativeUnit():

@@ -1,6 +1,6 @@
 import tensorflow as tf
 from keras.layers import Conv2D
-from layers.MultiplicativeUnit import MultiplicativeUnit
+from src.layers.MultiplicativeUnit import MultiplicativeUnit
 
 
 class ResidualMultiplicativeBlock():
@@ -16,14 +16,16 @@ class ResidualMultiplicativeBlock():
         self.filter_size = filter_size
 
     def __call__(self, h, reuse=False):
-        with tf.variable_scope(self.layer_name, reuse=reuse):
-            h1 = Conv2d(
+        with tf.compat.v1.variable_scope(self.layer_name, reuse=reuse):
+            h1 = Conv2D(
                 self.num_features, 1, padding='same', activation=None,
-                kernel_initializer=tf.contrib.layers.xavier_initializer(), name='h1')(h)
+                # kernel_initializer=tf.contrib.layers.xavier_initializer(), name='h1'
+                )(h)
             h2 = MultiplicativeUnit('multiplicative_unit_1', self.num_features, self.filter_size)(h1, reuse=reuse)
             h3 = MultiplicativeUnit('multiplicative_unit_2', self.num_features, self.filter_size)(h2, reuse=reuse)
-            h4 = Conv2d(
+            h4 = Conv2D(
                 2 * self.num_features, 1, padding='same', activation=None,
-                kernel_initializer=tf.contrib.layers.xavier_initializer(), name='h4')(h3)
+                # kernel_initializer=tf.contrib.layers.xavier_initializer(), name='h4'
+                )(h3)
             rmb = tf.add(h, h4)
             return rmb
