@@ -18,9 +18,8 @@ config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
 nb_epoch = 150  # number of epoch at training stage
-nb_epoch_cont = 20  # number of epoch at training (cont) stage
 batch_size = 32  # batch size
-T = 24  # number of time intervals in one day
+T = 48  # number of time intervals in one day
 lr = 0.0001  # learning rate
 # lr = 0.00002  # learning rate
 len_closeness = 6  # length of closeness dependent sequence
@@ -28,14 +27,12 @@ len_period = 0  # length of peroid dependent sequence
 len_trend = 4  # length of trend dependent sequence
 nb_residual_unit = 4   # number of residual units
 nb_flow = 2  # there are two types of flows: new-flow and end-flow
-days_test = 10  # divide data into two subsets: Train & Test, of which the test set is the last 10 days
+days_test = 7*4  
 len_test = T * days_test
-map_height, map_width = 16, 8  # grid size
-nb_area = 81
-# m_factor = math.sqrt(1. * map_height * map_width / nb_area)
-m_factor = 1
+map_height, map_width = 32, 32  # grid size
 
-filename = os.path.join("../data", 'CACHE', 'ST3DNet', 'NYC_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
+
+filename = os.path.join("../data", 'CACHE', 'ST3DNet', 'TaxiBJ_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
 f = open(filename, 'rb')
 X_train = pickle.load(f)
 Y_train = pickle.load(f)
@@ -66,7 +63,7 @@ for i in range(0,10):
     # plot_model(model, to_file='model.png',show_shapes=True)
 
     
-    hyperparams_name = 'BikeNYC.c{}.p{}.t{}.resunit{}.lr{}'.format(
+    hyperparams_name = 'TaxiBJ.c{}.p{}.t{}.resunit{}.lr{}'.format(
             len_closeness, len_period, len_trend, nb_residual_unit, lr)
     fname_param = '{}.best.h5'.format(hyperparams_name)
 
@@ -92,10 +89,10 @@ for i in range(0,10):
     
     Y_pred = model.predict(X_test) # compute predictions
 
-    score = evaluate(Y_test, Y_pred, rmse_factor=m_factor) # evaluate performance
+    score = evaluate(Y_test, Y_pred) # evaluate performance
 
     # save to csv
-    csv_name = os.path.join('results','ST3DNet_bikeNYC_results.csv')
+    csv_name = os.path.join('results','ST3DNet_taxiBJ_results.csv')
     if not os.path.isfile(csv_name):
         if os.path.isdir('results') is False:
             os.mkdir('results')
