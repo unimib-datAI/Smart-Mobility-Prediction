@@ -24,11 +24,11 @@ class CascadeMultiplicativeUnit():
             h = tf.add(hl, hr)
             h_sig = Conv2D(
                 self.num_features, self.filter_size, padding='same', activation=tf.sigmoid,
-                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                kernel_initializer=tf.keras.initializers.GlorotUniform(),
                 )(h)
             h_tan = Conv2D(
                 self.num_features, self.filter_size, padding='same', activation=tf.tanh,
-                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                kernel_initializer=tf.keras.initializers.GlorotUniform(),
                 )(h)
             h = tf.multiply(h_sig, h_tan)
             return h

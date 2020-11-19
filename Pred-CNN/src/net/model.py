@@ -49,7 +49,7 @@ def predcnn(input_length, map_height, map_width, channels=2, encoder_length=2,
 def resolution_preserving_cnn_encoders(x, num_hidden, filter_size, encoder_length, reuse):
     with tf.compat.v1.variable_scope('resolution_preserving_cnn_encoders', reuse=reuse):
         x = Conv2D(num_hidden, filter_size, padding='same', activation=None,
-                  #  kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                   kernel_initializer=tf.keras.initializers.GlorotUniform(),
                   #  name='input_conv'
                   )(x)
         for i in range(encoder_length):
@@ -75,7 +75,7 @@ def cnn_docoders(x, num_hidden, filter_size, output_channels, decoder_length, re
         for i in range(decoder_length):
             x = rmb('residual_multiplicative_block_'+str(i+1), num_hidden // 2, filter_size)(x)
         x = Conv2D(output_channels, filter_size, padding='same',
-                  #  kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                   kernel_initializer=tf.keras.initializers.GlorotUniform(),
                   #  name='output_conv'
                    )(x)
         return x

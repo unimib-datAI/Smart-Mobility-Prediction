@@ -18,19 +18,19 @@ class MultiplicativeUnit():
         with tf.compat.v1.variable_scope(self.layer_name, reuse=reuse):
             g1 = Conv2D(
                 self.num_features, self.filter_size, padding='same', activation=tf.sigmoid,
-                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                kernel_initializer=tf.keras.initializers.GlorotUniform(),
                 )(h)
             g2 = Conv2D(
                 self.num_features, self.filter_size, padding='same', activation=tf.sigmoid,
-                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                kernel_initializer=tf.keras.initializers.GlorotUniform(),
                 )(h)
             g3 = Conv2D(
                 self.num_features, self.filter_size, padding='same', activation=tf.sigmoid,
-                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                kernel_initializer=tf.keras.initializers.GlorotUniform(),
                 )(h)
             u = Conv2D(
                 self.num_features, self.filter_size, padding='same', activation=tf.tanh,
-                # kernel_initializer=tf.contrib.layers.xavier_initializer(),
+                kernel_initializer=tf.keras.initializers.GlorotUniform(),
                 )(h)
             g2_h = tf.multiply(g2, h)
             g3_u = tf.multiply(g3, u)
