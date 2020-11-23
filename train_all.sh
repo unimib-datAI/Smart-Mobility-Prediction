@@ -1,10 +1,10 @@
 # STAR
-cd ../STAR
+cd STAR
 python main_bikeNYC.py
 python main_taxiBJ.py
 
 # St-ResNet
-cd ST-ResNet
+cd ../ST-ResNet
 python main_bikeNYC.py
 python main_taxiBJ.py
 
