@@ -20,7 +20,7 @@ from star.evaluation import evaluate
 DATAPATH = '../data'  
 CACHEDATA = True  # cache data or NOT
 nb_epoch = 100 # number of epoch at training stage
-# nb_epoch_cont =  100 # number of epoch at training (cont) stage
+nb_epoch_cont =  100 # number of epoch at training (cont) stage
 batch_size = 16  # batch size
 T = 48  # number of time intervals in one day
 lr = 0.00015 # learning rate
@@ -163,7 +163,7 @@ for i in range(0,10):
     print(hyperparams_name)
 
     # csv = CSVLogger(os.path.join(path_result, hyperparams_name+'.csv'), separator=',', append=False)
-    early_stopping = EarlyStopping(monitor='val_rmse', patience=25, mode='min')
+    early_stopping = EarlyStopping(monitor='val_rmse', patience=4, mode='min')
     model_checkpoint = ModelCheckpoint(
         fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
@@ -190,6 +190,50 @@ for i in range(0,10):
 
     # evaluate model
     print('evaluating using the model that has the best loss on the valid set')
+    model.load_weights(fname_param)
+    score = model.evaluate(X_train, Y_train, batch_size=8, verbose=0)
+    print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+            (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+    score = model.evaluate(
+        X_test, Y_test, batch_size=8, verbose=0)
+    print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+            (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+
+    print('=' * 10)
+    print("training model (cont)...")
+    ts = time.time()
+    fname_param = os.path.join(
+        path_model, '{}.cont.best.h5'.format(hyperparams_name))
+    model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='rmse', verbose=0, save_best_only=True, mode='min')
+
+    history = model.fit(X_train_all, Y_train_all, 
+                        epochs=nb_epoch_cont, 
+                        verbose=0, 
+                        batch_size=batch_size, 
+                        validation_data=(X_test,Y_test),
+                        callbacks=[#TensorBoard(log_dir=os.path.join(path_log, '{}_step2_plot_{}'.format(hyperparams_name, i))),
+                                    # csv,
+                                    model_checkpoint])
+    pickle.dump((history.history), open(os.path.join(
+        path_result, '{}.cont.history.pkl'.format(hyperparams_name)), 'wb'))
+    model.save_weights(os.path.join(
+        path_model, '{}_cont.h5'.format(hyperparams_name)), overwrite=True)
+    print("\nelapsed time (training cont): %.3f seconds\n" % (time.time() - ts))
+
+    print('=' * 10)
+    print('evaluating using the final model')
+    score = model.evaluate(X_train_all, Y_train_all, batch_size=1, verbose=0)
+    print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+            (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+    score = model.evaluate(
+        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+    print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+            (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+
+
+
+
     model.load_weights(fname_param) # load best weights for current iteration
     
     Y_pred = model.predict(X_test) # compute predictions

@@ -22,8 +22,8 @@ from deepst.evaluation import evaluate
 DATAPATH = '../data'  # data path, you may set your own data path with the global envirmental variable DATAPATH
 CACHEDATA = True  # cache data or NOT
 path_cache = os.path.join(DATAPATH, 'CACHE', 'ST-ResNet')  # cache path
-nb_epoch = 100  # number of epoch at training stage
-# nb_epoch_cont = 100  # number of epoch at training (cont) stage
+nb_epoch = 500  # number of epoch at training stage
+nb_epoch_cont = 100  # number of epoch at training (cont) stage
 batch_size = 32  # batch size
 T = 48  # number of time intervals in one day
 lr = 0.0002  # learning rate
@@ -133,7 +133,7 @@ for i in range(0,10):
     fname_param = os.path.join(path_model, '{}.best.h5'.format(hyperparams_name))
     print(hyperparams_name)
 
-    early_stopping = EarlyStopping(monitor='val_rmse', patience=25, mode='min')
+    early_stopping = EarlyStopping(monitor='val_rmse', patience=2, mode='min')
     model_checkpoint = ModelCheckpoint(
         fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
@@ -156,6 +156,43 @@ for i in range(0,10):
     print('=' * 10)
 
     # evaluate model
+    model.load_weights(fname_param)
+    score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[
+                           0] // 48, verbose=0)
+    print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+    score = model.evaluate(
+        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+    print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+
+    print('=' * 10)
+    print("training model (cont)...")
+    ts = time.time()
+    fname_param = os.path.join(
+        'MODEL', '{}.cont.best.h5'.format(hyperparams_name))
+    model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='rmse', verbose=0, save_best_only=True, mode='min')
+    history = model.fit(X_train, Y_train, epochs=nb_epoch_cont, verbose=0, batch_size=batch_size, callbacks=[
+                        model_checkpoint])
+    pickle.dump((history.history), open(os.path.join(
+        path_result, '{}.cont.history.pkl'.format(hyperparams_name)), 'wb'))
+    model.save_weights(os.path.join(
+        'MODEL', '{}_cont.h5'.format(hyperparams_name)), overwrite=True)
+    print("\nelapsed time (training cont): %.3f seconds\n" % (time.time() - ts))
+
+    print('=' * 10)
+    print('evaluating using the final model')
+    score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[
+                           0] // 48, verbose=0)
+    print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+    score = model.evaluate(
+        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+    print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
+
+
     print('evaluating using the model that has the best loss on the valid set')
     model.load_weights(fname_param) # load best weights for current iteration
     

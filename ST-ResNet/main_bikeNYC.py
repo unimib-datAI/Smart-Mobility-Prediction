@@ -22,15 +22,15 @@ from deepst.evaluation import evaluate
 DATAPATH = '../data'  # data path, you may set your own data path with the global envirmental variable DATAPATH
 CACHEDATA = True  # cache data or NOT
 path_cache = os.path.join(DATAPATH, 'CACHE', 'ST-ResNet')  # cache path
-nb_epoch = 100  # number of epoch at training stage
-# nb_epoch_cont = 100  # number of epoch at training (cont) stage
+nb_epoch = 500  # number of epoch at training stage
+nb_epoch_cont = 100  # number of epoch at training (cont) stage
 batch_size = 32  # batch size
 
 T = 24  # number of time intervals in one day
 lr = 0.0002  # learning rate
 len_closeness = 3  # length of closeness dependent sequence
-len_period = 1  # length of peroid dependent sequence
-len_trend = 1  # length of trend dependent sequence
+len_period = 4  # length of peroid dependent sequence
+len_trend = 4  # length of trend dependent sequence
 nb_residual_unit = 4 # paper says 4 for BikeNYC
 
 nb_flow = 2  # there are two types of flows: inflow and outflow
@@ -143,7 +143,7 @@ for i in range(0,10):
     fname_param = os.path.join(path_model, '{}.best.h5'.format(hyperparams_name))
     print(hyperparams_name)
 
-    early_stopping = EarlyStopping(monitor='val_rmse', patience=25, mode='min')
+    early_stopping = EarlyStopping(monitor='val_rmse', patience=5, mode='min')
     model_checkpoint = ModelCheckpoint(
         fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
@@ -166,6 +166,44 @@ for i in range(0,10):
     print('=' * 10)
 
     # evaluate model
+    model.load_weights(fname_param)
+    score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[
+                           0] // 48, verbose=0)
+    print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
+
+    score = model.evaluate(
+        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+    print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
+
+    print('=' * 10)
+    print("training model (cont)...")
+    fname_param = os.path.join(
+        'MODEL', '{}.cont.best.h5'.format(hyperparams_name))
+    model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='rmse', verbose=0, save_best_only=True, mode='min')
+    history = model.fit(X_train, Y_train, epochs=nb_epoch_cont, verbose=0, batch_size=batch_size, callbacks=[
+                        model_checkpoint], validation_data=(X_test, Y_test))
+    pickle.dump((history.history), open(os.path.join(
+        path_result, '{}.cont.history.pkl'.format(hyperparams_name)), 'wb'))
+    model.save_weights(os.path.join(
+        'MODEL', '{}_cont.h5'.format(hyperparams_name)), overwrite=True)
+
+    print('=' * 10)
+    print('evaluating using the final model')
+    score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[
+                           0] // 48, verbose=0)
+    print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
+
+    score = model.evaluate(
+        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+    print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+          (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
+
+
+
     print('evaluating using the model that has the best loss on the valid set')
     model.load_weights(fname_param) # load best weights for current iteration
     

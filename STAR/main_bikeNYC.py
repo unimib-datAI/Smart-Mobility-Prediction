@@ -21,7 +21,7 @@ from star.evaluation import evaluate
 # parameters
 DATAPATH = '../data' 
 nb_epoch = 100  # number of epoch at training stage
-# nb_epoch_cont = 150  # number of epoch at training (cont) stage
+nb_epoch_cont = 150  # number of epoch at training (cont) stage
 batch_size = 16  # batch size
 T = 24  # number of time intervals in one day
 CACHEDATA = True  # cache data or NOT
@@ -126,6 +126,17 @@ def cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_tes
     h5.create_dataset('T_test', data=timestamp_test)
     h5.close()
 
+def lrschedule(epoch):
+    if epoch <= 25:
+        return 0.0002
+    elif epoch <= 50:
+        return 0.00015
+    elif epoch <= 75:
+        return 0.0001
+    elif epoch <= 100:
+        return 0.00005
+    else: return 0.00001
+
 # load data
 print("loading data...")
 fname = os.path.join(path_cache, 'BikeNYC_C{}_P{}_T{}.h5'.format(
@@ -154,8 +165,6 @@ for i in range(0,10):
     print('=' * 10)
     print("compiling model...")
 
-    # lr_callback = LearningRateScheduler(lrschedule)
-
     # build model
     tf.keras.backend.set_image_data_format('channels_first')
     tf.keras.backend.image_data_format()
@@ -166,7 +175,7 @@ for i in range(0,10):
     fname_param = os.path.join(path_model, '{}.best.h5'.format(hyperparams_name))
     print(hyperparams_name)
 
-    early_stopping = EarlyStopping(monitor='val_rmse', patience=25, mode='min')
+    early_stopping = EarlyStopping(monitor='val_rmse', patience=4, mode='min')
     model_checkpoint = ModelCheckpoint(
         fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
@@ -189,7 +198,48 @@ for i in range(0,10):
     print('=' * 10)
 
     # evaluate model
-    print('evaluating using the model that has the best loss on the valid set')
+    model.load_weights(fname_param)
+    score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[
+                            0] // 48, verbose=0)
+    print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+            (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
+
+    score = model.evaluate(
+        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+    print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+            (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
+
+    print('=' * 10)
+    print("training model (cont)...")
+    fname_param = os.path.join(
+        path_model, '{}.cont.best.h5'.format(hyperparams_name))
+    model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='rmse', verbose=0, save_best_only=True, mode='min')
+    lr_callback = LearningRateScheduler(lrschedule)
+    history = model.fit(X_train_all, Y_train_all,
+                        epochs=nb_epoch_cont,
+                        verbose=0,
+                        batch_size=batch_size,
+                        callbacks=[lr_callback, model_checkpoint],
+                        validation_data=(X_test, Y_test))
+    pickle.dump((history.history), open(os.path.join(
+        path_result, '{}.cont.history.pkl'.format(hyperparams_name)), 'wb'))
+    model.save_weights(os.path.join(
+        path_model, '{}_cont.h5'.format(hyperparams_name)), overwrite=True)
+
+    print('=' * 10)
+    print('evaluating using the final model')
+    score = model.evaluate(X_train_all, Y_train_all, batch_size=Y_train.shape[
+                            0] // 48, verbose=0)
+    print('Train score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+            (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
+
+    score = model.evaluate(
+        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+    print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
+            (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2. * m_factor))
+
+    # print('evaluating using the model that has the best loss on the valid set')
     model.load_weights(fname_param) # load best weights for current iteration
     
     Y_pred = model.predict(X_test) # compute predictions
