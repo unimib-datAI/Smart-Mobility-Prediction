@@ -18,19 +18,26 @@ config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
 nb_epoch = 150  # number of epoch at training stage
+nb_epoch_cont = 200  # number of epoch at training (cont) stage
 batch_size = 32  # batch size
 T = 48  # number of time intervals in one day
 lr = 0.0001  # learning rate
 # lr = 0.00002  # learning rate
 len_closeness = 6  # length of closeness dependent sequence
 len_period = 0  # length of peroid dependent sequence
-len_trend = 4  # length of trend dependent sequence
-nb_residual_unit = 4   # number of residual units
+len_trend = 2  # length of trend dependent sequence
+nb_residual_unit = 7   # number of residual units
 nb_flow = 2  # there are two types of flows: new-flow and end-flow
 days_test = 7*4  
 len_test = T * days_test
 map_height, map_width = 32, 32  # grid size
 
+path_result = 'RET'
+path_model = 'MODEL'
+if os.path.isdir(path_result) is False:
+    os.mkdir(path_result)
+if os.path.isdir(path_model) is False:
+    os.mkdir(path_model)
 
 filename = os.path.join("../data", 'CACHE', 'ST3DNet', 'TaxiBJ_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
 f = open(filename, 'rb')
@@ -65,9 +72,9 @@ for i in range(0,10):
     
     hyperparams_name = 'TaxiBJ.c{}.p{}.t{}.resunit{}.lr{}'.format(
             len_closeness, len_period, len_trend, nb_residual_unit, lr)
-    fname_param = '{}.best.h5'.format(hyperparams_name)
+    fname_param = os.path.join(path_model, '{}.best.h5'.format(hyperparams_name))
 
-    early_stopping = EarlyStopping(monitor='val_rmse', patience=50, mode='min')
+    early_stopping = EarlyStopping(monitor='val_rmse', patience=5, mode='min')
     model_checkpoint = ModelCheckpoint(fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
 
     print('=' * 10)
@@ -81,10 +88,38 @@ for i in range(0,10):
                         callbacks=[early_stopping, model_checkpoint],
                         verbose=0)
 
-    model.save_weights('{}.h5'.format(hyperparams_name), overwrite=True)
+    model.save_weights(os.path.join(
+        path_model, '{}.h5'.format(hyperparams_name)), overwrite=True)
     
     # evaluate model
-    print('evaluating using the model that has the best loss on the valid set')
+    model.load_weights(fname_param)
+    score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[0] // 48, verbose=0)
+    print('Train score: %.6f  rmse (real): %.6f' %(score[0], score[1] * m_factor))
+
+
+    score = model.evaluate(X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+    print('Test score: %.6f  rmse (real): %.6f' %(score[0], score[1] * m_factor))
+
+    print('=' * 10)
+    print("training model (cont)...")
+    fname_param = os.path.join(path_model, '{}.cont.best.h5'.format(hyperparams_name))
+    model_checkpoint = ModelCheckpoint(fname_param, monitor='rmse', verbose=0, save_best_only=True, mode='min')
+    history = model.fit(X_train, Y_train, epochs=nb_epoch_cont, verbose=0, batch_size=batch_size, callbacks=[model_checkpoint], validation_data=(X_test, Y_test))
+    model.save_weights(os.path.join(
+        path_model, '{}.h5'.format(hyperparams_name)), overwrite=True)
+
+    print('=' * 10)
+    print('evaluating using the final model')
+    score = model.evaluate(X_train, Y_train, batch_size=Y_train.shape[0] // 48, verbose=0)
+    print('Train score: %.6f  rmse (real): %.6f' %
+        (score[0], score[1] * m_factor))
+
+    score = model.evaluate(
+        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+    print('Test score: %.6f  rmse (real): %.6f' %
+        (score[0], score[1] * m_factor))
+
+
     model.load_weights(fname_param) # load best weights for current iteration
     
     Y_pred = model.predict(X_test) # compute predictions
