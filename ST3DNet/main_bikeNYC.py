@@ -42,7 +42,7 @@ if os.path.isdir(path_result) is False:
 if os.path.isdir(path_model) is False:
     os.mkdir(path_model)
 
-filename = os.path.join("../data", 'CACHE', 'ST3DNet', 'NYC_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
+filename = os.path.join("../data", 'CACHE', 'ST3DNet', 'BikeNYC_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
 f = open(filename, 'rb')
 X_train = pickle.load(f)
 Y_train = pickle.load(f)

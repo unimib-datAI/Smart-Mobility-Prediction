@@ -34,6 +34,30 @@ def remove_incomplete_days(data, timestamps, T=48):
     timestamps = [timestamps[i] for i in idx]
     return data, timestamps
 
+def remove_incomplete_days_taxiNYC(data, timestamps, T=24):
+    # remove a certain day which has not T timestamps
+    days = []  # available days: some day only contain some seqs
+    days_incomplete = []
+    i = 0
+    while i < len(timestamps):
+        if int(timestamps[i][8:]) != 0:
+            i += 1
+        elif i+T-1 < len(timestamps) and int(timestamps[i+T-1][8:]) == T-1:
+            days.append(timestamps[i][:8])
+            i += T
+        else:
+            days_incomplete.append(timestamps[i][:8])
+            i += 1
+    print("incomplete days: ", days_incomplete)
+    days = set(days)
+    idx = []
+    for i, t in enumerate(timestamps):
+        if t[:8] in days:
+            idx.append(i)
+
+    data = data[idx]
+    timestamps = [timestamps[i] for i in idx]
+    return data, timestamps
 
 def load_stdata(fname):
     f = h5py.File(fname, 'r')
@@ -57,11 +81,22 @@ def string2timestamp(strings, T=48):
 
     return timestamps
 
+def string2timestamp_taxiNYC(strings, T=48):
+    timestamps = []
+
+    time_per_slot = 24.0 / T
+    num_per_T = T // 24
+    for t in strings:
+        year, month, day, slot = int(t[:4]), int(t[4:6]), int(t[6:8]), int(t[8:])
+        timestamps.append(pd.Timestamp(datetime(year, month, day, hour=int(slot * time_per_slot), minute=(slot % num_per_T) * int(60.0 * time_per_slot))))
+
+    return timestamps
+
 
 class STMatrix(object):
     """docstring for STMatrix"""
 
-    def __init__(self, data, timestamps, T=48, CheckComplete=True):
+    def __init__(self, data, timestamps, T=48, CheckComplete=True, Hours0_23=False):
         super(STMatrix, self).__init__()
         assert len(data) == len(timestamps)
         self.data = data
@@ -69,7 +104,8 @@ class STMatrix(object):
         self.data_2 = data[:, 1, :, :]
         self.timestamps = timestamps
         self.T = T
-        self.pd_timestamps = string2timestamp(timestamps, T=self.T)
+        func = string2timestamp_taxiNYC if Hours0_23 else string2timestamp
+        self.pd_timestamps = func(timestamps, T=self.T)
         if CheckComplete:
             self.check_complete()
         # index
@@ -463,6 +499,85 @@ def load_data_bikeNYC(filename, T=24, nb_flow=2, len_closeness=None, len_period=
     print()
     return X_train, Y_train, X_test, Y_test, mmn, metadata_dim, timestamp_train, timestamp_test
 
+def load_data_taxiNYC(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=None,
+              len_test=None, meta_data=True, datapath=None):
+    """
+    """
+    assert(len_closeness + len_period + len_trend > 0)
+    # load data
+    # 10 - 14
+    data_all = []
+    timestamps_all = list()
+    for year in range(10, 15):
+        fname = os.path.join(
+            datapath, 'TaxiNYC', 'NYC{}_Taxi_M16x8_T60_InOut.h5'.format(year))
+        print("file name: ", fname)
+        data, timestamps = load_stdata(fname)
+        # print(timestamps)
+        # remove a certain day which does not have 48 timestamps
+        data, timestamps = remove_incomplete_days_taxiNYC(data, timestamps, T)
+        data = data[:, :nb_flow]
+        data[data < 0] = 0.
+        data_all.append(data)
+        timestamps_all.append(timestamps)
+        print("\n")
+    
+    # minmax_scale
+    data_train = np.vstack(copy(data_all))[:-len_test]
+    print('train_data shape: ', data_train.shape)
+    mmn = MinMaxNormalization()
+    mmn.fit(data_train)
+    data_all_mmn = [mmn.transform(d) for d in data_all]
+
+    XC, XP, XT = [], [], []
+    Y = []
+    timestamps_Y = []
+    for data, timestamps in zip(data_all_mmn, timestamps_all):
+        # instance-based dataset --> sequences with format as (X, Y) where X is a sequence of images and Y is an image.
+        st = STMatrix(data, timestamps, T, CheckComplete=False, Hours0_23=True)
+        _XC, _XP, _XT, _Y, _timestamps_Y = st.create_dataset_3D(len_closeness=len_closeness, len_period=len_period, len_trend=len_trend)
+        XC.append(_XC)
+        XP.append(_XP)
+        XT.append(_XT)
+        Y.append(_Y)
+        timestamps_Y += _timestamps_Y
+
+    XC = np.vstack(XC)
+    XP = np.vstack(XP)
+    XT = np.vstack(XT)
+    Y = np.vstack(Y)
+    print("XC shape: ", XC.shape, "XP shape: ", XP.shape, "XT shape: ", XT.shape, "Y shape:", Y.shape)
+    XC_train, XP_train, XT_train, Y_train = XC[:-len_test], XP[:-len_test], XT[:-len_test], Y[:-len_test]
+    XC_test, XP_test, XT_test, Y_test = XC[-len_test:], XP[-len_test:], XT[-len_test:], Y[-len_test:]
+    
+    timestamp_train, timestamp_test = timestamps_Y[:-len_test], timestamps_Y[-len_test:]
+    X_train = []
+    X_test = []
+    for l, X_ in zip([len_closeness, len_period, len_trend], [XC_train, XP_train, XT_train]):
+        if l > 0:
+            X_train.append(X_)
+    for l, X_ in zip([len_closeness, len_period, len_trend], [XC_test, XP_test, XT_test]):
+        if l > 0:
+            X_test.append(X_)
+    print('train shape:', XC_train.shape, Y_train.shape, 'test shape: ', XC_test.shape, Y_test.shape)
+    # load meta feature
+    if meta_data:
+        meta_feature = timestamp2vec(timestamps_Y)
+        metadata_dim = meta_feature.shape[1]
+        meta_feature_train, meta_feature_test = meta_feature[:-len_test], meta_feature[-len_test:]
+        X_train.append(meta_feature_train)
+        X_test.append(meta_feature_test)
+    else:
+        metadata_dim = None
+    for _X in X_train:
+        print(_X.shape, )
+    print()
+    for _X in X_test:
+        print(_X.shape, )
+    print()
+    return X_train, Y_train, X_test, Y_test, mmn, metadata_dim, timestamp_train, timestamp_test
+
+
 ### load and cache bikeNYC data
 DATAPATH = '../data'
 T = 24  # number of time intervals in one day
@@ -484,7 +599,7 @@ CACHEDATA=True
 path_cache = os.path.join(DATAPATH, 'CACHE', 'ST3DNet')
 if CACHEDATA and os.path.isdir(path_cache) is False:
     os.mkdir(path_cache)
-filename = os.path.join(path_cache, 'NYC_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
+filename = os.path.join(path_cache, 'BikeNYC_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
 
 f = open(filename, 'wb')
 pickle.dump(X_train, f)
@@ -519,6 +634,40 @@ path_cache = os.path.join(DATAPATH, 'CACHE', 'ST3DNet')
 if CACHEDATA and os.path.isdir(path_cache) is False:
     os.mkdir(path_cache)
 filename = os.path.join(path_cache, 'TaxiBJ_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
+
+f = open(filename, 'wb')
+pickle.dump(X_train, f)
+pickle.dump(Y_train, f)
+pickle.dump(X_test, f)
+pickle.dump(Y_test, f)
+pickle.dump(mmn, f)
+pickle.dump(external_dim, f)
+pickle.dump(timestamp_train, f)
+pickle.dump(timestamp_test, f)
+f.close()
+###
+
+### load and cache taxiNYC data
+DATAPATH = '../data'
+T = 24  # number of time intervals in one day
+len_closeness = 6  # length of closeness dependent sequence
+len_period = 0  # length of peroid dependent sequence
+len_trend = 4  # length of trend dependent sequence
+nb_residual_unit = 4   # number of residual units
+nb_flow = 2  # there are two types of flows: new-flow and end-flow
+days_test = 7*4
+len_test = T * days_test
+map_height, map_width = 16, 8  # grid size
+
+X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = \
+        load_data_taxiNYC(T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period,
+                  len_trend=len_trend, len_test=len_test, meta_data=False, datapath=DATAPATH)
+
+CACHEDATA=True
+path_cache = os.path.join(DATAPATH, 'CACHE', 'ST3DNet')
+if CACHEDATA and os.path.isdir(path_cache) is False:
+    os.mkdir(path_cache)
+filename = os.path.join(path_cache, 'TaxiNYC_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
 
 f = open(filename, 'wb')
 pickle.dump(X_train, f)
