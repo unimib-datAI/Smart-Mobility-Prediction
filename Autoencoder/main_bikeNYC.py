@@ -107,7 +107,7 @@ def train_model(encoder_blocks, lstm_units, lr, batch_size, save_results=False, 
     model = m.build_model(
         len_closeness, len_period, len_trend, nb_flow, map_height, map_width,
         external_dim=external_dim, lr=lr,
-        encoder_blocks=2,
+        encoder_blocks=encoder_blocks,
         filters=filters,
         lstm_units=lstm_units
         # save_model_pic=f'BikeNYC_{model_name}'
