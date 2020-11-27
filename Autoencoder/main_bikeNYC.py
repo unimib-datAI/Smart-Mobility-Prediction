@@ -87,7 +87,7 @@ else:
     X_val, Y_val, X_test, Y_test, mmn, external_dim, \
     timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
-        len_val=len_val, preprocess_name='preprocessing_bikenyc.pkl', meta_data=True, datapath=DATAPATH)
+        len_val=len_val, preprocess_name='preprocessing_nyc.pkl', meta_data=True, datapath=DATAPATH)
     if CACHEDATA:
         cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_test, Y_test,
               external_dim, timestamp_train_all, timestamp_train, timestamp_val, timestamp_test)
