@@ -1,3 +1,6 @@
+'''
+togliere downsampling, mettere conv standard
+'''
 from keras.models import Model
 from keras.layers import (
     Input,
@@ -23,18 +26,18 @@ def my_conv(input_layer, filters, activation):
     return l
 
 def my_downsampling(input_layer):
-    l = Conv2D(input_layer.shape[-1], (2,2), (2,2), activation='relu')(input_layer)
+    l = Conv2D(input_layer.shape[-1], (2,2), padding='same', activation='relu')(input_layer)
     l = BatchNormalization()(l)
     return l
 
 def my_conv_transpose(input_layer, skip_connection_layer):
-    l = Conv2DTranspose(input_layer.shape[-1], (2,2), (2,2))(input_layer)
+    l = Conv2DTranspose(input_layer.shape[-1], (2,2), padding='same')(input_layer)
     l = Add()([l, skip_connection_layer])
     l = Activation('relu')(l)
     l = BatchNormalization()(l)
     return l
 
-def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16]):
+def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16], lstm_units=16):
 
     main_inputs = []
     #ENCODER
@@ -69,10 +72,10 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, extern
     s = x.shape
 
     x = Reshape((x.shape[1]*x.shape[2], x.shape[3]))(x)
-    x = LSTM(16, return_sequences=True)(x)
-    x = LSTM(16, return_sequences=True)(x)
-    x = LSTM(16, return_sequences=True)(x)
-    x = LSTM(16, return_sequences=True)(x)
+    x = LSTM(lstm_units, return_sequences=True)(x)
+    x = LSTM(lstm_units, return_sequences=True)(x)
+    x = LSTM(lstm_units, return_sequences=True)(x)
+    x = LSTM(filters[-1], return_sequences=True)(x)
     x = Reshape((s[1:]))(x)
 
     # # dense layer for bottleneck
@@ -97,8 +100,8 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, extern
 
     return Model(main_inputs, output)
 
-def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16], lr=0.0001, save_model_pic=None):
-    model = my_model(len_c, len_p, len_t, nb_flow, map_height, map_width, external_dim, encoder_blocks, filters)
+def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16], lstm_units=16, lr=0.0001, save_model_pic=None):
+    model = my_model(len_c, len_p, len_t, nb_flow, map_height, map_width, external_dim, encoder_blocks, filters, lstm_units)
     adam = Adam(lr=lr)
     model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
     # model.summary()
