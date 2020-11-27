@@ -31,6 +31,7 @@ nb_flow = 2  # there are two types of flows: new-flow and end-flow
 days_test = 7*4  
 len_test = T * days_test
 map_height, map_width = 32, 32  # grid size
+m_factor = 1
 
 path_result = 'RET'
 path_model = 'MODEL'
