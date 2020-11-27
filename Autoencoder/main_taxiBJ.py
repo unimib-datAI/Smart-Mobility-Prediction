@@ -94,7 +94,7 @@ def train_model(encoder_blocks, lstm_units, lr, batch_size, save_results=False, 
         filters = [32,64,16]
     elif (encoder_blocks==3):
         filters = [32,64,64,16]
-    elif (encoder_blocks==4)
+    elif (encoder_blocks==4):
         filters = [32,64,64,64,16]
 
     # build model
