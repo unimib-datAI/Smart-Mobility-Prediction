@@ -9,6 +9,7 @@ from keras import backend as K
 
 from utils import cache, read_cache
 from src import TaxiBJ, TaxiBJ3d
+from src.evaluation import evaluate
 from src import (
     model as m1,
     model2 as m2,
