@@ -37,7 +37,7 @@ def _residual_unit(filters, num_res, kernel_size):
         return Add()([input_layer, residual])
     return f
 
-def resUnits2D(filters, num_res, repetations=1):
+def resUnits2D(filters, num_res, kernel_size, repetations=1):
     def f(input_layer):
         for i in range(repetations):
             input_layer = _residual_unit(filters, num_res, kernel_size)(input_layer)
