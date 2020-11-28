@@ -27,6 +27,9 @@ models_dict = {
     'model5': m5,
 }
 
+
+gpus = tf.config.experimental.list_physical_devices('GPU')
+tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6144)])
 # parameters
 model_name = 'model5'
 
@@ -94,12 +97,13 @@ else:
 
 print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
 
-def train_model(encoder_blocks, lstm_units, lr, batch_size, kernel_size, save_results=False, i=''):
+def train_model(encoder_blocks, lstm_units, lr, batch_size, kernel_size,num_res, save_results=False, i=''):
     # get discrete parameters
     encoder_blocks = int(encoder_blocks)
     lstm_units = 2 ** int(lstm_units)
     batch_size = 16 * int(batch_size)
     kernel_size = int(kernel_size)
+    num_res = int(num_res)
 
     filters = [32,64,16] if encoder_blocks==2 else [32,64,64,16]
 
@@ -111,13 +115,14 @@ def train_model(encoder_blocks, lstm_units, lr, batch_size, kernel_size, save_re
         encoder_blocks=encoder_blocks,
         filters=filters,
         lstm_units=lstm_units,
-        kernel_size=kernel_size
+        kernel_size=kernel_size,
+        num_res=num_res
         # save_model_pic=f'BikeNYC_{model_name}'
     )
     # model.summary()
-    hyperparams_name = '{}.BikeNYC{}.c{}.p{}.t{}.encoderblocks_{}.lstm_{}.kernel_size_{}.lr_{}.batchsize_{}'.format(
+    hyperparams_name = '{}.BikeNYC{}.c{}.p{}.t{}.encoderblocks_{}.lstm_{}.kernel_size_{}.lr_{}.batchsize_{}.num_res_{}'.format(
         model_name, i, len_closeness, len_period, len_trend, encoder_blocks, 
-        lstm_units, kernel_size, lr, batch_size)
+        lstm_units, kernel_size, lr, batch_size, num_res)
     fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
 
     early_stopping = EarlyStopping(monitor='val_rmse', patience=25, mode='min')
@@ -190,10 +195,11 @@ optimizer = BayesianOptimization(f=train_model,
                      'lstm_units':(3, 5.999), #2**
                      'lr':(0.001, 0.0001),
                      'batch_size':(1, 2.999),
-                     'kernel_size': (3, 5.999)}, #*16
+                     'kernel_size': (3, 5.999), #*16
+                     'num_res': (1, 4.999)},
                      verbose=2)
  
-optimizer.maximize(init_points=10, n_iter=20)
+optimizer.maximize(init_points=15, n_iter=20)
 
 # training-test-evaluation iterations with best params
 targets = [e['target'] for e in optimizer.res]
