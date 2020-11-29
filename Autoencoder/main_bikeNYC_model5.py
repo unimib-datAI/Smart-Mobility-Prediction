@@ -210,5 +210,7 @@ for i in range(0,10):
                 lstm_units=params['lstm_units'],
                 lr=params['lr'],
                 batch_size=params['batch_size'],
+                kernel_size = params['kernel_size'],
+                num_res =params['num_res'],
                 save_results=True,
                 i=i)
