@@ -17,13 +17,15 @@ from keras.layers import (
     LSTM
 )
 from keras.optimizers import Adam
+from keras import regularizers
 import numpy as np
-
+import tensorflow as tf
 import src.metrics as metrics
+
 
 def conv_relu_bn(filters, kernel_size=(3,3)):
     def f(input_layer):
-        l = Conv2D(filters, kernel_size=kernel_size, padding='same', activation='relu')(input_layer)
+        l = Conv2D(filters, kernel_size=kernel_size, padding='same', activation='relu', kernel_regularizer=regularizers.l2(l2=1e-4))(input_layer)
         l = BatchNormalization()(l)
         return l                                                                                                                                                                                                                                      
     return f
