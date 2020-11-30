@@ -108,6 +108,7 @@ def train_model(encoder_blocks, lstm_units, lr, batch_size, kernel_size, num_res
     kernel_size = int(kernel_size)
     num_res = int(num_res)
     Att = int(Att)
+    lr = round(lr,5)
 
 
     filters = [32, 64, 16] if encoder_blocks == 2 else [32, 64, 64, 16]
