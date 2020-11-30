@@ -110,7 +110,7 @@ def conv_relu_bn(filters, kernel_size=(3, 3)):
     def f(input_layer):
         l = Conv2D(filters, kernel_size=kernel_size, padding='same', activation='relu',
                    kernel_regularizer=regularizers.l2(l2=1e-4))(input_layer)
-        l = BatchNormalization()(l)
+        l = BatchNormalization(epsilon=1e-05, momentum=0.1)(l)
         return l
 
     return f
@@ -147,7 +147,7 @@ def my_conv_transpose(input_layer, skip_connection_layer):
     l = input_layer
     l = Add()([l, skip_connection_layer])
     l = Activation('relu')(l)
-    l = BatchNormalization()(l)
+    l = BatchNormalization(epsilon=1e-05, momentum=0.1)(l)
     return l
 
 
