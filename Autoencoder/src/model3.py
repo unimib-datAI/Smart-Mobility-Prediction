@@ -96,13 +96,13 @@ def predcnn_perframe(xs, num_hidden, filter_size, input_length, reuse):
             xs = temp
         return xs[0]
 
-def my_conv(input_layer, filters, activation, time_distributed=False):
+def my_conv(input_layer, filters, activation, kernel_size=3, time_distributed=False):
     if (time_distributed):
-        l = TimeDistributed(Conv2D(filters, (3,3), padding='same', activation=activation))(input_layer)
+        l = TimeDistributed(Conv2D(filters, kernel_size, padding='same', activation=activation))(input_layer)
         l = TimeDistributed(BatchNormalization())(l)
         return l
     else:
-        l = Conv2D(filters, (3,3), padding='same', activation=activation)(input_layer)
+        l = Conv2D(filters, kernel_size, padding='same', activation=activation)(input_layer)
         l = BatchNormalization()(l)
         return l
 
@@ -120,7 +120,8 @@ def my_conv_transpose(input_layer, skip_connection_layer):
     return l
 
 
-def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16]):
+def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
+             external_dim=8, encoder_blocks=3, filters=[32,64,64,16], kernel_size=3):
 
     main_inputs = []
     #ENCODER
@@ -134,19 +135,19 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, extern
     skip_connection_layers = []
     for i in range(0, encoder_blocks):        
         # conv + relu + bn
-        x = my_conv(x, filters[i], 'relu', time_distributed=True)
+        x = my_conv(x, filters[i], 'relu', kernel_size, time_distributed=True)
         # append layer to skip connection list
         skip_connection_layers.append(x)
         # max pool
         x = my_downsampling(x, x.shape[-1])
 
     # last convolution tx4x4x16
-    x = my_conv(x, filters[-1], 'relu')
+    x = my_conv(x, filters[-1], 'relu', kernel_size)
     s = x.shape
     print(s)
 
     list_features = [x[:,i,:,:,:] for i in range(x.shape[1])]
-    x = predcnn_perframe(list_features, s[-1], (3,3), 4, reuse=False)
+    x = predcnn_perframe(list_features, s[-1], kernel_size, 4, reuse=False)
 
     # merge external features
     if external_dim != None and external_dim > 0:
@@ -161,7 +162,7 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, extern
     # build decoder blocks
     for i in reversed(range(0, encoder_blocks)):
         # conv + relu + bn
-        x = my_conv(x, filters[i], 'relu')
+        x = my_conv(x, filters[i], 'relu', kernel_size)
         print(x.shape)
         # conv_transpose + skip_conn + relu + bn
         x = my_conv_transpose(x, skip_connection_layers[i])
@@ -171,8 +172,9 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, extern
 
     return Model(main_inputs, output)
 
-def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16], lr=0.0001, save_model_pic=None):
-    model = my_model(len_c, len_p, len_t, nb_flow, map_height, map_width, external_dim, encoder_blocks, filters)
+def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16], kernel_size=3, lr=0.0001, save_model_pic=None):
+    model = my_model(len_c, len_p, len_t, nb_flow, map_height, map_width,
+                     external_dim, encoder_blocks, filters, kernel_size)
     adam = Adam(lr=lr)
     model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
     # model.summary()
