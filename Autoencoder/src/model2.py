@@ -22,19 +22,19 @@ import src.metrics as metrics
 
 def my_conv(input_layer, filters, activation):
     l = Conv2D(filters, (3,3), padding='same', activation=activation)(input_layer)
-    l = BatchNormalization()(l)
+    l = BatchNormalization(epsilon=1e-05, momentum=0.1)(l)
     return l
 
 def my_downsampling(input_layer):
     l = Conv2D(input_layer.shape[-1], (2,2), padding='same', activation='relu')(input_layer)
-    l = BatchNormalization()(l)
+    l = BatchNormalization(epsilon=1e-05, momentum=0.1)(l)
     return l
 
 def my_conv_transpose(input_layer, skip_connection_layer):
     l = Conv2DTranspose(input_layer.shape[-1], (2,2), padding='same')(input_layer)
     l = Add()([l, skip_connection_layer])
     l = Activation('relu')(l)
-    l = BatchNormalization()(l)
+    l = BatchNormalization(epsilon=1e-05, momentum=0.1)(l)
     return l
 
 def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16], lstm_units=16):
