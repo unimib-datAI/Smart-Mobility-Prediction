@@ -121,7 +121,8 @@ def my_conv_transpose(input_layer, skip_connection_layer):
 
 
 def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
-             external_dim=8, encoder_blocks=3, filters=[32,64,64,16], kernel_size=3):
+             external_dim=8, encoder_blocks=3, filters=[32,64,64,16], kernel_size=3,
+             lstm_units=16):
 
     main_inputs = []
     #ENCODER
@@ -144,10 +145,17 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
     # last convolution tx4x4x16
     x = my_conv(x, filters[-1], 'relu', kernel_size)
     s = x.shape
-    print(s)
+    # print(s)
 
-    list_features = [x[:,i,:,:,:] for i in range(x.shape[1])]
-    x = predcnn_perframe(list_features, s[-1], kernel_size, 4, reuse=False)
+    # list_features = [x[:,i,:,:,:] for i in range(x.shape[1])]
+    # x = predcnn_perframe(list_features, s[-1], kernel_size, 4, reuse=False)
+    x = TimeDistributed(Flatten())(x)
+    units = x.shape[-1]
+    x = LSTM(lstm_units, return_sequences=True)(x)
+    x = LSTM(lstm_units, return_sequences=True)(x)
+    x = LSTM(lstm_units, return_sequences=True)(x)
+    x = LSTM(units, return_sequences=False)(x)
+    x = Reshape((s[2:]))(x)
 
     # merge external features
     if external_dim != None and external_dim > 0:
@@ -172,9 +180,11 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
 
     return Model(main_inputs, output)
 
-def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32, external_dim=8, encoder_blocks=3, filters=[32,64,64,16], kernel_size=3, lr=0.0001, save_model_pic=None):
+def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
+                external_dim=8, encoder_blocks=3, filters=[32,64,64,16],
+                kernel_size=3, lstm_units=16, lr=0.0001, save_model_pic=None):
     model = my_model(len_c, len_p, len_t, nb_flow, map_height, map_width,
-                     external_dim, encoder_blocks, filters, kernel_size)
+                     external_dim, encoder_blocks, filters, kernel_size, lstm_units)
     adam = Adam(lr=lr)
     model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
     # model.summary()

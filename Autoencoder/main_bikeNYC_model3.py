@@ -98,11 +98,12 @@ else:
 print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
 
 
-def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False, i=''):
+def train_model(encoder_blocks, lr, batch_size, kernel_size, lstm_units, save_results=False, i=''):
     # get discrete parameters
     encoder_blocks = int(encoder_blocks)
     batch_size = 16 * int(batch_size)
     kernel_size = int(kernel_size)
+    lstm_units = 2 ** int(lstm_units)
     lr = round(lr,5)
 
 
@@ -116,12 +117,13 @@ def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False,
         encoder_blocks=encoder_blocks,
         filters=filters,
         kernel_size=kernel_size,
+        lstm_units=lstm_units,
         # save_model_pic=f'BikeNYC_{model_name}'
     )
     # model.summary()
-    hyperparams_name = '{}.BikeNYC{}.c{}.p{}.t{}.encoderblocks_{}.kernel_size_{}.lr_{}.batchsize_{}'.format(
+    hyperparams_name = '{}.BikeNYC{}.c{}.p{}.t{}.encoderblocks_{}.lstmUnits_{}.kernel_size_{}.lr_{}.batchsize_{}'.format(
         model_name, i, len_closeness, len_period, len_trend, encoder_blocks,
-        kernel_size, lr, batch_size)
+        lstm_units, kernel_size, lr, batch_size)
     fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
 
     early_stopping = EarlyStopping(monitor='val_rmse', patience=25, mode='min')
@@ -135,7 +137,7 @@ def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False,
         print(f'Iteration {i}')
         np.random.seed(i * 18)
         tf.random.set_seed(i * 18)
-    history = model.fit(X_train, Y_train,
+    history = model.fit(X_train_all, Y_train_all,
                         epochs=nb_epoch,
                         batch_size=batch_size,
                         validation_data=(X_test, Y_test),
@@ -164,7 +166,7 @@ def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False,
         score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1)  # evaluate performance
 
         # save to csv
-        csv_name = os.path.join('results', f'{model_name}_bikeNYC_results.csv')
+        csv_name = os.path.join('results', f'{model_name}LSTM_bikeNYC_results.csv')
         if not os.path.isfile(csv_name):
             if os.path.isdir('results') is False:
                 os.mkdir('results')
@@ -192,21 +194,22 @@ def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False,
 
 # bayesian optimization
 optimizer = BayesianOptimization(f=train_model,
-                                 pbounds={'encoder_blocks': (2, 3.999),
+                                 pbounds={'encoder_blocks': (2, 2),
                                           'lr': (0.001, 0.0001),
                                           'batch_size': (1, 2.999), # *16
-                                          'kernel_size': (3, 5.999)
+                                          'kernel_size': (3, 5.999),
+                                          'lstm_units': (4, 6.999), #2**
                                  },
                                  verbose=2)
 
-optimizer.maximize(init_points=3, n_iter=15)
+optimizer.maximize(init_points=10, n_iter=10)
 
 # training-test-evaluation iterations with best params
 targets = [e['target'] for e in optimizer.res]
 best_index = targets.index(max(targets))
 params = optimizer.res[best_index]['params']
 # save best params
-params_fname = f'{model_name}_bikeNYC_best_params.json'
+params_fname = f'{model_name}LSTM_bikeNYC_best_params.json'
 with open(os.path.join('results', params_fname), 'w') as f:
     json.dump(params, f, indent=2)
 # with open(os.path.join('results', params_fname), 'r') as f:
@@ -216,5 +219,6 @@ for i in range(0, 10):
                 lr=params['lr'],
                 batch_size=params['batch_size'],
                 kernel_size=params['kernel_size'],
+                lstm_units=params['lstm_units'],
                 save_results=True,
                 i=i)
