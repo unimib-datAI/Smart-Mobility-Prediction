@@ -13,6 +13,8 @@ script used to generate weather info of newyork city from 2010-01-01 to 2014-12-
 years = [2010, 2011, 2012, 2013, 2014]
 months = [i for i in range(1,13)]
 T = 24 # intervals per day
+city = 'New+York' # string to insert in the http request
+fname = 'NY_Meteorology.h5' # output file name
 
 # dictionary to build one-hot vectore from weather code
 # see http://www.worldweatheronline.com/feed/wwoConditionCodes.txt
@@ -82,7 +84,7 @@ for year in years:
     enddate = f'{year}-{month:02d}-{num_days_in_month}'
 
     # call api and get weather info for current month
-    r = requests.get(f'http://api.worldweatheronline.com/premium/v1/past-weather.ashx?q=New+York&tp=1&date={startdate}&enddate={enddate}&format=json&key={api_key}')
+    r = requests.get(f'http://api.worldweatheronline.com/premium/v1/past-weather.ashx?q={city}&tp=1&date={startdate}&enddate={enddate}&format=json&key={api_key}')
 
     # get json (see https://www.worldweatheronline.com/developer/api/docs/historical-weather-api.aspx)
     j = json.loads(r.text)['data']['weather']
@@ -112,7 +114,6 @@ windspeeds = np.asarray(windspeeds)
 weather = np.asarray(weather)
 
 # write to file
-fname = 'NY_Meteorology.h5'
 h5 = h5py.File(fname, 'w')
 h5.create_dataset('date', data=timestamps)
 h5.create_dataset('Temperature', data=temperatures)
