@@ -60,11 +60,15 @@ class STMatrix(object):
         XT = []
         Y = []
         timestamps_Y = []
+        C_in_P = 2
+        C_in_T = 2
         depends = [range(1, len_closeness+1),
-                   [PeriodInterval * self.T * j for j in range(1, len_period+1)],
-                   [TrendInterval * self.T * j for j in range(1, len_trend+1)]]
+                #    [PeriodInterval * self.T * j for j in range(1, len_period+1)],
+                #    [TrendInterval * self.T * j for j in range(1, len_trend+1)]]
+                  [i + PeriodInterval * self.T * j for j in range(1, len_period+1) for i in range(0, C_in_P)],
+                  [i + TrendInterval * self.T * j for j in range(1, len_trend+1) for i in range(0, C_in_T)]]
 
-        i = max(self.T * TrendInterval * len_trend, self.T * PeriodInterval * len_period, len_closeness)
+        i = max(self.T * TrendInterval * len_trend + C_in_T-1, self.T * PeriodInterval * len_period, len_closeness)
         while i < len(self.pd_timestamps):
             Flag = True
             for depend in depends:
