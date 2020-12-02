@@ -127,7 +127,7 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
     main_inputs = []
     #ENCODER
     # input layer tx32x32x2
-    t = len_c+len_p+len_t
+    t = len_c+len_p*2+len_t*2
     input = Input(shape=((t, map_height, map_width, nb_flow)))
     main_inputs.append(input)
     x = input
@@ -147,14 +147,14 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
     s = x.shape
     # print(s)
 
-    # list_features = [x[:,i,:,:,:] for i in range(x.shape[1])]
-    # x = predcnn_perframe(list_features, s[-1], kernel_size, 4, reuse=False)
-    x = TimeDistributed(Flatten())(x)
-    units = x.shape[-1]
-    x = LSTM(lstm_units, return_sequences=True)(x)
-    x = LSTM(lstm_units, return_sequences=True)(x)
-    x = LSTM(lstm_units, return_sequences=True)(x)
-    x = LSTM(units, return_sequences=False)(x)
+    list_features = [x[:,i,:,:,:] for i in range(x.shape[1])]
+    x = predcnn_perframe(list_features, s[-1], kernel_size, t, reuse=False)
+    # x = TimeDistributed(Flatten())(x)
+    # units = x.shape[-1]
+    # x = LSTM(lstm_units, return_sequences=True)(x)
+    # x = LSTM(lstm_units, return_sequences=True)(x)
+    # x = LSTM(lstm_units, return_sequences=True)(x)
+    # x = LSTM(units, return_sequences=False)(x)
     x = Reshape((s[2:]))(x)
 
     # merge external features
