@@ -12,12 +12,111 @@ from keras.layers import (
     TimeDistributed,
     Conv2DTranspose,
     LSTM,
-    Add
+    Add,
+    Layer
 )
 from keras.optimizers import Adam
 import numpy as np
 
 import src.metrics as metrics
+
+# Definizione dell'Attention
+tf.config.run_functions_eagerly(True)
+def hw_flatten(x):
+    return tf.reshape(x, shape=[tf.shape(x)[0], x.shape[1] * x.shape[2], x.shape[-1]])
+
+
+def global_avg_pooling(x):
+    gap = tf.reduce_mean(x, axis=[1, 2])
+    return gap
+
+
+def global_sum_pooling(x):
+    gsp = tf.reduce_sum(x, axis=[1, 2])
+    return gsp
+
+
+def up_sample(x, scale_factor=2):
+    _, h, w, _ = x.get_shape().as_list()
+    new_size = [h * scale_factor, w * scale_factor]
+    return tf.compat.v1.image.resize_nearest_neighbor(x, size=new_size)
+
+
+def down_sample(x):
+    return tf.nn.avg_pool2d(x, ksize=2, strides=2, padding='SAME')
+
+
+def max_pooling(x):
+    return tf.nn.max_pool2d(x, ksize=2, strides=2, padding='SAME')
+
+
+def conv(x, channels, kernel, stride):
+    x = Conv2D(filters=channels, kernel_size=kernel, strides=stride)(x)
+    return x
+
+
+def attention(x, ch):
+    batch_size, height, width, num_channels = tf.shape(x)[0], x.shape[1], x.shape[2], x.shape[3]
+    f = conv(x, ch // 8, kernel=1, stride=1)  # [bs, h, w, c']
+    g = conv(x, ch // 8, kernel=1, stride=1)  # [bs, h, w, c']
+    h = conv(x, ch, kernel=1, stride=1)  # [bs, h, w, c]
+
+    # N = h * w
+    s = tf.matmul(hw_flatten(g), hw_flatten(f), transpose_b=True)  # # [bs, N, N]
+
+    beta = tf.nn.softmax(s)  # attention map
+
+    o = tf.matmul(beta, hw_flatten(h))  # [bs, N, C]
+    gamma = tf.Variable(tf.zeros([1], dtype=tf.dtypes.float32), name="gamma", trainable=True)
+
+    o = tf.reshape(o, shape=[batch_size, height, width, num_channels])  # [bs, h, w, C]
+    x = gamma * o + x
+
+    return x
+
+
+class Attention_2(Layer):
+    def __init__(self, ch):
+        super(Attention_2, self).__init__()
+        self.ch = ch
+    
+    def build(self, input_shape):
+        super(Attention_2, self).build(input_shape)
+
+    def call(self, x):
+        batch_size, height, width, num_channels = tf.shape(x)[0], x.shape[1], x.shape[2], x.shape[3]
+        f = conv(x, self.ch // 8, kernel=1, stride=1)  # [bs, h, w, c']
+        f = max_pooling(
+            f)  # estrapola solo i valori più grandi, avendo poi padding same allora non c'è una riduzione della dimensionalità
+
+        g = conv(x, self.ch // 8, kernel=1, stride=1)  # [bs, h, w, c']
+
+        h = conv(x, self.ch // 2, kernel=1, stride=1)  # [bs, h, w, c]
+        h = max_pooling(h)
+
+        # N = h * w
+        s = tf.matmul(hw_flatten(g), hw_flatten(f), transpose_b=True)  # # [bs, N, N]
+
+        beta = tf.nn.softmax(s)  # attention map
+
+        o = tf.matmul(beta, hw_flatten(h))  # [bs, N, C]
+        gamma = tf.Variable(lambda: tf.zeros([1], dtype=tf.dtypes.float32), trainable=True, name="gamma", shape=tf.TensorShape([1]))
+
+        o = tf.reshape(o, shape=[batch_size, height, width, num_channels // 2])  # [bs, h, w, C]
+        o = conv(o, self.ch, kernel=1, stride=1)
+        x = gamma * o + x
+
+        return x
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape)
+    
+    def get_config(self):
+        config = super().get_config().copy()
+        config.update({
+            'ch': self.ch
+        })
+        return config
 
 class MultiplicativeUnit():
     """Initialize the multiplicative unit.
@@ -100,6 +199,7 @@ def my_conv(input_layer, filters, activation, kernel_size=3, time_distributed=Fa
     if (time_distributed):
         l = TimeDistributed(Conv2D(filters, kernel_size, padding='same', activation=activation))(input_layer)
         l = TimeDistributed(BatchNormalization())(l)
+        l = TimeDistributed(Attention_2(filters))(l)
         return l
     else:
         l = Conv2D(filters, kernel_size, padding='same', activation=activation)(input_layer)
@@ -113,6 +213,7 @@ def my_downsampling(input_layer, filters):
 
 def my_conv_transpose(input_layer, skip_connection_layer):
     l = Conv2DTranspose(input_layer.shape[-1], (2,2), (2,2))(input_layer)
+    l = Attention_2(input_layer.shape[-1])(l)
     skl = skip_connection_layer[:,-1,:,:,:] # extract features from last image
     l = Add()([l, skl])
     l = Activation('relu')(l)
