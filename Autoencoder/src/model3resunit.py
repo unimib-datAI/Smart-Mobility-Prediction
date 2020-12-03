@@ -51,7 +51,7 @@ def max_pooling(x):
     return tf.nn.max_pool2d(x, ksize=2, strides=2, padding='SAME')
 
 def conv_sigmoid(x, channels, kernel, stride):
-    x = Conv2D(filters=channels, kernel_size=kernel, strides=stride, activation='sigmoid')(x)
+    x = Conv2D(filters=channels, kernel_size=kernel, padding='same', strides=stride, activation='sigmoid')(x)
     return x
 
 def dense(x, units):
@@ -60,11 +60,13 @@ def dense(x, units):
 
 
 def spatial_attention(x):
+    batch_size, height, width, num_channels = tf.shape(x)[0], x.shape[1], x.shape[2], x.shape[3]
     h1 = global_avg_pooling_spatial(x)
     h2 = global_max_pooling_spatial(x)
-    gamma = tf.Variable(tf.ones([h1.shape[1:]], dtype=tf.dtypes.float32), trainable=True, name="gamma", shape=tf.TensorShape(h1.shape[1:]))
-    delta = tf.Variable(tf.zeros([h2.shape[1:]], dtype=tf.dtypes.float32), trainable=True, name="delta", shape=tf.TensorShape(h2.shape[2:]))
+    gamma = tf.Variable(tf.ones(h1.shape[1:], dtype=tf.dtypes.float32), trainable=True, name="gamma", shape=tf.TensorShape(h1.shape[1:]))
+    delta = tf.Variable(tf.zeros(h2.shape[1:], dtype=tf.dtypes.float32), trainable=True, name="delta", shape=tf.TensorShape(h2.shape[1:]))
     h3 = gamma * h1 + delta * h2
+    h3 = tf.reshape(h3, shape=[batch_size, height, width, 1])
     h4 = conv_sigmoid(h3, 1, kernel=7, stride=1) # il 7 come kernel size è stato impostato da loro
     return x * h4
 
@@ -73,10 +75,10 @@ def channel_attention(x, ch):
     batch_size, height, width, num_channels = tf.shape(x)[0], x.shape[1], x.shape[2], x.shape[3]
     h1 = global_avg_pooling(x)
     h2 = global_max_pooling(x)
-    gamma1 = tf.Variable(tf.ones([h1.shape[1:]], dtype=tf.dtypes.float32), trainable=True, name="gamma1", shape=tf.TensorShape(h1.shape[1:]))
-    delta1 = tf.Variable(tf.zeros([h2.shape[1:]], dtype=tf.dtypes.float32), trainable=True, name="delta1", shape=tf.TensorShape(h2.shape[2:]))
+    gamma1 = tf.Variable(tf.ones(h1.shape[1:], dtype=tf.dtypes.float32), trainable=True, name="gamma1", shape=tf.TensorShape(h1.shape[1:]))
+    delta1 = tf.Variable(tf.zeros(h2.shape[1:], dtype=tf.dtypes.float32), trainable=True, name="delta1", shape=tf.TensorShape(h2.shape[1:]))
     h3 = gamma1 * h1 + delta1 * h2
-    h3 = tf.reshape(h3, shape=[batch_size, height * width * num_channels])
+    h3 = tf.reshape(h3, shape=[batch_size, num_channels])
     h4 = dense(h3, ch // 8)
     h5 = dense(h4, ch)
     h5 = tf.reshape(h5, shape=[batch_size, 1, 1, num_channels])
@@ -258,7 +260,7 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
     #final conv
     
      # last convolution + tanh + bn 32x32x2
-    x = channel_attention(x, filters[i])
+    x = channel_attention(x, filters[0])
     x = spatial_attention(x)
     output = my_conv(nb_flow, 'tanh')(x)
 
