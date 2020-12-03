@@ -1,3 +1,14 @@
+'''
+Channel_attention:
+- utilizzo sia average sia del max_poling pesati opportunamente
+- la struttura segue il paper 'Attention-Based Deep Ensemble Net for Large-Scale Online Taxi-Hailing Demand Prediction'
+
+Spatial_attention:
+- utilizzo sia average sia del max_poling pesati opportunamente
+- kernel_size impostata secondo il paper di riferimento 'Attention-Based Deep Ensemble Net for Large-Scale Online Taxi-Hailing Demand Prediction'
+'''
+
+
 import tensorflow as tf
 from keras.models import Model
 from keras.layers import (
@@ -18,6 +29,58 @@ from keras.optimizers import Adam
 import numpy as np
 
 import src.metrics as metrics
+
+def global_avg_pooling(x): # keep channel
+    gap = tf.reduce_mean(x, axis=[1, 2])
+    return gap
+
+def global_avg_pooling_spatial(x): # keep height e width
+    gap = tf.reduce_mean(x, axis=[3])
+    return gap
+
+
+def global_max_pooling_spatial(x): # keep height e width
+    gsp = tf.reduce_max(x, axis=[3])
+    return gsp
+
+def global_max_pooling(x): # keep height e width
+    gsp = tf.reduce_max(x, axis=[1,2])
+    return gsp
+
+def max_pooling(x):
+    return tf.nn.max_pool2d(x, ksize=2, strides=2, padding='SAME')
+
+def conv_sigmoid(x, channels, kernel, stride):
+    x = Conv2D(filters=channels, kernel_size=kernel, strides=stride, activation='sigmoid')(x)
+    return x
+
+def dense(x, units):
+    x = Dense(units)(x)
+    return x
+
+
+def spatial_attention(x):
+    h1 = global_avg_pooling_spatial(x)
+    h2 = global_max_pooling_spatial(x)
+    gamma = tf.Variable(tf.ones([h1.shape[1:]], dtype=tf.dtypes.float32), trainable=True, name="gamma", shape=tf.TensorShape(h1.shape[1:]))
+    delta = tf.Variable(tf.zeros([h2.shape[1:]], dtype=tf.dtypes.float32), trainable=True, name="delta", shape=tf.TensorShape(h2.shape[2:]))
+    h3 = gamma * h1 + delta * h2
+    h4 = conv_sigmoid(h3, 1, kernel=7, stride=1) # il 7 come kernel size è stato impostato da loro
+    return x * h4
+
+
+def channel_attention(x, ch):
+    batch_size, height, width, num_channels = tf.shape(x)[0], x.shape[1], x.shape[2], x.shape[3]
+    h1 = global_avg_pooling(x)
+    h2 = global_max_pooling(x)
+    gamma1 = tf.Variable(tf.ones([h1.shape[1:]], dtype=tf.dtypes.float32), trainable=True, name="gamma1", shape=tf.TensorShape(h1.shape[1:]))
+    delta1 = tf.Variable(tf.zeros([h2.shape[1:]], dtype=tf.dtypes.float32), trainable=True, name="delta1", shape=tf.TensorShape(h2.shape[2:]))
+    h3 = gamma1 * h1 + delta1 * h2
+    h3 = tf.reshape(h3, shape=[batch_size, height * width * num_channels])
+    h4 = dense(h3, ch // 8)
+    h5 = dense(h4, ch)
+    h5 = tf.reshape(h5, shape=[batch_size, 1, 1, num_channels])
+    return x * h5
 
 class MultiplicativeUnit():
     """Initialize the multiplicative unit.
@@ -193,6 +256,11 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
         # conv + relu + bn
         x = TSresUnits2D(filters[i], num_res, kernel_size, time_distributed=False)(x)
     #final conv
+    
+     # last convolution + tanh + bn 32x32x2
+    x = channel_attention(x, filters[i])
+    x = spatial_attention(x)
+    output = my_conv(x, nb_flow, 'tanh')
     output = my_conv(nb_flow, 'tanh')(x)
 
 
