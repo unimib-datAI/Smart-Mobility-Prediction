@@ -260,7 +260,6 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
      # last convolution + tanh + bn 32x32x2
     x = channel_attention(x, filters[i])
     x = spatial_attention(x)
-    output = my_conv(x, nb_flow, 'tanh')
     output = my_conv(nb_flow, 'tanh')(x)
 
 
