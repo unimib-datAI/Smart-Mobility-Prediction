@@ -23,7 +23,8 @@ from keras.layers import (
     TimeDistributed,
     Conv2DTranspose,
     LSTM,
-    Add
+    Add,
+    MaxPool2D
 )
 from keras.optimizers import Adam
 import numpy as np
@@ -83,6 +84,46 @@ def channel_attention(x, ch):
     h5 = dense(h4, ch)
     h5 = tf.reshape(h5, shape=[batch_size, 1, 1, num_channels])
     return x * h5
+
+def hw_flatten(x):
+    return TimeDistributed(Reshape((x.shape[-3]*x.shape[-2], x.shape[-1])))(x)
+
+def max_pooling(x):
+    return TimeDistributed(MaxPool2D(strides=2, padding='SAME'))(x)
+
+def conv(x, channels, kernel, stride):
+    x = TimeDistributed(Conv2D(filters=channels, kernel_size=kernel, strides=stride))(x)
+    return x
+
+# def matmul(x, y):
+#     return TimeDistributed(Dot())([x, y])
+
+def attention_2(x, ch):
+    batch_size, height, width, num_channels = tf.shape(x)[0], x.shape[-3], x.shape[-2], x.shape[-1]
+    f = conv(x, ch, kernel=1, stride=1)  # [bs, h, w, c']
+    f = max_pooling(
+        f)  # estrapola solo i valori più grandi, avendo poi padding same allora non c'è una riduzione della dimensionalità
+    # print(f.shape)
+    g = conv(x, ch, kernel=1, stride=1)  # [bs, h, w, c']
+    # print(g.shape)
+
+    h = conv(x, ch // 2, kernel=1, stride=1)  # [bs, h, w, c]
+    h = max_pooling(h)
+
+    # N = h * w
+    s = tf.matmul(hw_flatten(g), hw_flatten(f), transpose_b=True)  # # [bs, N, N]
+    # print(f's.shape: {s.shape}')
+    beta = tf.nn.softmax(s)  # attention map
+
+    o = tf.matmul(beta, hw_flatten(h))  # [bs, N, C]
+    gamma = tf.Variable(tf.zeros([1], dtype=tf.dtypes.float32), trainable=True, name="gamma", shape=tf.TensorShape([1]))
+    # o = tf.reshape(o, shape=[batch_size, height, width, num_channels // 2])  # [bs, h, w, C]
+    o = TimeDistributed(Reshape((height, width, num_channels // 2)))(o)
+    # print(f'o.shape: {o.shape}')
+    o = conv(o, ch, kernel=1, stride=1)
+    x = gamma * o + x
+
+    return x
 
 class MultiplicativeUnit():
     """Initialize the multiplicative unit.
@@ -225,6 +266,10 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
         x = TSresUnits2D(filters[i], num_res, kernel_size, time_distributed=True)(x)
         # append layer to skip connection list
         skip_connection_layers.append(x)
+
+        # attention
+        x = attention_2(x, filters[i])
+
         # downsampling
         x = my_downsampling(x, x.shape[-1])
 
@@ -260,8 +305,6 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
     #final conv
     
      # last convolution + tanh + bn 32x32x2
-    x = channel_attention(x, filters[0])
-    x = spatial_attention(x)
     output = my_conv(nb_flow, 'tanh')(x)
 
 
