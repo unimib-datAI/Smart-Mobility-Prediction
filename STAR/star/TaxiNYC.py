@@ -121,7 +121,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
         timestamps_all.append(timestamps)
         print("\n")
     # minmax_scale
-    data_train = data[:-len_test]
+    data_train = np.vstack(copy(data_all))[:-len_test]
     print('train_data shape: ', data_train.shape)
     mmn = MinMaxNormalization()
     mmn.fit(data_train)
