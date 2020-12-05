@@ -91,7 +91,7 @@ if os.path.exists(fname) and CACHEDATA:
         fname, 'preprocessing_nyc.pkl')
     print("load %s successfully" % fname)
 else:
-    if (model_name == 'model3resunit_attention'):
+    if (model_name.startswith('model3')):
         load_data = BikeNYC3d.load_data
     else:
         load_data = BikeNYC.load_data
