@@ -7,6 +7,7 @@ import h5py
 import math
 from sklearn.model_selection import ParameterGrid
 from bayes_opt import BayesianOptimization
+import json
 
 import tensorflow as tf
 from keras import backend as K
@@ -105,7 +106,7 @@ def cache(fname, X_train, Y_train, X_test, Y_test, external_dim, timestamp_train
     h5.create_dataset('T_train', data=timestamp_train)
     h5.create_dataset('T_test', data=timestamp_test)
     h5.close()
-    
+
     # load data
 print("loading data...")
 fname = os.path.join(path_cache, 'TaxiNYC_C{}_P{}_T{}.h5'.format(
