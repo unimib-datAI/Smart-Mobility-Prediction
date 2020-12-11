@@ -166,7 +166,7 @@ def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False,
     # evaluate
     model.load_weights(fname_param)
     score = model.evaluate(
-        X_test, Y_test, batch_size=Y_test.shape[0], verbose=0)
+        X_test, Y_test, batch_size=128 , verbose=0) # batch_size=Y_test.shape[0]
     print('Test score: %.6f rmse (norm): %.6f rmse (real): %.6f' %
           (score[0], score[1], score[1] * (mmn._max - mmn._min) / 2.))
 
