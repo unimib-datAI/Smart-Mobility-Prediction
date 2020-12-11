@@ -12,12 +12,24 @@ import tensorflow as tf
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from bayes_opt import BayesianOptimization
+from bayes_opt.logger import JSONLogger
+from bayes_opt.event import Events
+from bayes_opt.util import load_logs
 
 from src.net.model import build_model
 import src.metrics as metrics
 from src.datasets import TaxiNYC
 from src.evaluation import evaluate
 from cache_utils import cache, read_cache
+
+# tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6144)])
+gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            for gpu in gpus:  # Currently, memory growth needs to be the same across GPUs
+                tf.config.experimental.set_memory_growth(gpu, True)
+        except RuntimeError as e:
+            print(e)  # Memory growth must be set before GPUs have been initialized
 
 # parameters
 DATAPATH = '../data' 
@@ -54,6 +66,8 @@ if os.path.isdir(path_model) is False:
     os.mkdir(path_model)
 if CACHEDATA and os.path.isdir(path_cache) is False:
     os.mkdir(path_cache)
+if os.path.isdir('results') is False:
+    os.mkdir('results')
 
 
 print("loading data...")
@@ -177,15 +191,18 @@ optimizer = BayesianOptimization(f=train_model,
                                  },
                                  verbose=2)
 
+
+bs_fname = 'bs_taxiBJ.json'
+logger = JSONLogger(path="./results/" + bs_fname)
+optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
+
 optimizer.maximize(init_points=5, n_iter=15)
 
 # training-test-evaluation iterations with best params
-if os.path.isdir('results') is False:
-    os.mkdir('results')
 targets = [e['target'] for e in optimizer.res]
-bs_fname = 'bs_taxiNYC.json'
-with open(os.path.join('results', bs_fname), 'w') as f:
-    json.dump(optimizer.res, f, indent=2)
+# bs_fname = 'bs_taxiNYC.json'
+# with open(os.path.join('results', bs_fname), 'w') as f:
+#     json.dump(optimizer.res, f, indent=2)
 best_index = targets.index(max(targets))
 params = optimizer.res[best_index]['params']
 # save best params
