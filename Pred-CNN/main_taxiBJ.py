@@ -15,6 +15,13 @@ from src.datasets import TaxiBJ
 from src.evaluation import evaluate
 from cache_utils import cache, read_cache
 
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:  # Currently, memory growth needs to be the same across GPUs
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)  # Memory growth must be set before GPUs have been initialized
 # parameters
 DATAPATH = '../data' 
 nb_epoch = 100  # number of epoch at training stage
