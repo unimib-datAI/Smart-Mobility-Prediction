@@ -156,7 +156,7 @@ def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False,
                         # callbacks=[early_stopping, model_checkpoint],
                         # callbacks=[model_checkpoint, lr_callback],
                         callbacks=[model_checkpoint],
-                        verbose=2)
+                        verbose=0)
     model.save_weights(os.path.join(
         'MODEL', '{}.h5'.format(hyperparams_name)), overwrite=True)
     pickle.dump((history.history), open(os.path.join(
