@@ -2,6 +2,7 @@ from __future__ import print_function
 import os
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 from . import string2timestamp as s2t
 
