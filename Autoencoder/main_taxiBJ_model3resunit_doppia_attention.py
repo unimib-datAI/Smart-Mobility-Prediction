@@ -5,6 +5,9 @@ import json
 import pickle as pickle
 from keras.callbacks import EarlyStopping, ModelCheckpoint, LearningRateScheduler
 from bayes_opt import BayesianOptimization
+from bayes_opt.logger import JSONLogger
+from bayes_opt.event import Events
+from bayes_opt.util import load_logs
 import tensorflow as tf
 from keras import backend as K
 
@@ -35,8 +38,15 @@ models_dict = {
     'model6': m6,
 }
 
+# tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6144)])
 gpus = tf.config.experimental.list_physical_devices('GPU')
-tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6144)])
+    if gpus:
+        try:
+            for gpu in gpus:  # Currently, memory growth needs to be the same across GPUs
+                tf.config.experimental.set_memory_growth(gpu, True)
+        except RuntimeError as e:
+            print(e)  # Memory growth must be set before GPUs have been initialized
+
 
 np.random.seed(1234)
 tf.random.set_seed(1234)
@@ -70,6 +80,8 @@ if os.path.isdir(path_model) is False:
     os.mkdir(path_model)
 if CACHEDATA and os.path.isdir(path_cache) is False:
     os.mkdir(path_cache)
+if os.path.isdir('results') is False:
+    os.mkdir('results')
 
 # load data
 print("loading data...")
@@ -202,15 +214,23 @@ optimizer = BayesianOptimization(f=train_model,
                               },
                               verbose=2)
 
-optimizer.maximize(init_points=10, n_iter=10)
+bs_fname = 'bs_taxiBJ.json'
+logger = JSONLogger(path="./results/" + bs_fname)
+optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
+
+optimizer.maximize(init_points=2, n_iter=5)
+
+
+# New optimizer is loaded with previously seen points
+# load_logs(optimizer, logs=["./results/" + bs_fname])
+# optimizer.maximize(init_points=10, n_iter=10)
 
 # training-test-evaluation iterations with best params
-if os.path.isdir('results') is False:
-    os.mkdir('results')
+
 targets = [e['target'] for e in optimizer.res]
-bs_fname = 'bs_taxiBJ.json'
-with open(os.path.join('results', bs_fname), 'w') as f:
-    json.dump(optimizer.res, f, indent=2)
+# bs_fname = 'bs_taxiBJ.json'
+# with open(os.path.join('results', bs_fname), 'w') as f:
+    # json.dump(optimizer.res, f, indent=2)
 best_index = targets.index(max(targets))
 params = optimizer.res[best_index]['params']
 # save best params
