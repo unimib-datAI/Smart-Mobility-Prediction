@@ -196,7 +196,7 @@ bs_fname = 'bs_taxiBJ.json'
 logger = JSONLogger(path="./results/" + bs_fname)
 optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
-optimizer.maximize(init_points=5, n_iter=15)
+optimizer.maximize(init_points=2, n_iter=10)
 
 # training-test-evaluation iterations with best params
 targets = [e['target'] for e in optimizer.res]
