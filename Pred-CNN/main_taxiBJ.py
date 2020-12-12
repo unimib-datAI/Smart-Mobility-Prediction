@@ -26,11 +26,11 @@ if gpus:
 DATAPATH = '../data' 
 nb_epoch = 100  # number of epoch at training stage
 # nb_epoch_cont = 150  # number of epoch at training (cont) stage
-batch_size = 16  # batch size
+batch_size = 32  # batch size
 T = 48  # number of time intervals in one day
 CACHEDATA = True  # cache data or NOT
 
-lr = 0.0001  # learning rate
+lr = 0.00014  # learning rate
 len_c = 4  # length of closeness dependent sequence
 len_p = 0  # length of peroid dependent sequence
 len_t = 0  # length of trend dependent sequence
