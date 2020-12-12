@@ -84,7 +84,7 @@ def load_data(T=48, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     # 13 - 16
     data_all = []
     timestamps_all = list()
-    for year in range(15, 17): #13 input dataset reduction
+    for year in range(13, 17): 
         fname = os.path.join(
             datapath, 'TaxiBJ', 'BJ{}_M32x32_T30_InOut.h5'.format(year))
         print("file name: ", fname)
