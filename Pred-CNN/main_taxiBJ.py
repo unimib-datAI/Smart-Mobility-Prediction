@@ -109,7 +109,7 @@ for i in range(0,10):
                         batch_size=batch_size,
                         validation_data=(X_val,Y_val),
                         callbacks=[early_stopping, model_checkpoint],
-                        verbose=0)
+                        verbose=2)
     model.save_weights(os.path.join(
         path_model, '{}.h5'.format(hyperparams_name)), overwrite=True)
     pickle.dump((history.history), open(os.path.join(
