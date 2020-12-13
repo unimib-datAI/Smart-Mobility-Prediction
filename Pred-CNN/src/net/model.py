@@ -11,7 +11,7 @@ import src.metrics as metrics
 # def predcnn(params, mask_true, num_hidden, filter_size, seq_length=20, input_length=10):
 def predcnn(input_length, map_height, map_width, channels=2, encoder_length=2,
             decoder_length=3, num_hidden=64, filter_size=(3,3)):
-    
+
     seq_length = input_length + 1 # next frame prediction
 
     with tf.compat.v1.variable_scope('predcnn'):
@@ -80,6 +80,8 @@ def cnn_docoders(x, num_hidden, filter_size, output_channels, decoder_length, re
                    )(x)
         return x
 
+def custom_loss(y_true, y_pred):
+    return tf.nn.l2_loss(y_true - y_pred)
 
 def build_model(input_length, map_height, map_width, channels=2, encoder_length=2,
                 decoder_length=3, num_hidden=64, filter_size=(3,3),lr=0.0001,
@@ -88,7 +90,7 @@ def build_model(input_length, map_height, map_width, channels=2, encoder_length=
     model = predcnn(input_length, map_height, map_width, channels, encoder_length,
             decoder_length, num_hidden, filter_size)
     adam = Adam(lr=lr)
-    model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
+    model.compile(loss=custom_loss, optimizer=adam, metrics=[metrics.rmse])
     # model.summary()
     if (save_model_pic):
         from keras.utils.vis_utils import plot_model
