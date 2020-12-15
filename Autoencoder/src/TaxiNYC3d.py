@@ -140,7 +140,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     timestamps_Y = []
     for data, timestamps in zip(data_all_mmn, timestamps_all):
 
-        st = STMatrix(data, timestamps, T, CheckComplete=False, Hours0_23=True)
+        st = STMatrix(data, timestamps, T, CheckComplete=False, Hours0_23=False)
         _XC, _XP, _XT, _Y, _timestamps_Y = st.create_dataset(
             len_closeness=len_closeness, len_period=len_period, len_trend=len_trend)
         # _XCPT[:, 0:6, :, :] = _XC
