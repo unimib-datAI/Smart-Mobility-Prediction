@@ -6,7 +6,7 @@ import numpy as np
 import h5py
 from . import *
 from .minmax_normalization import MinMaxNormalization
-from .STMatrix import STMatrix
+from .STMatrix3d import STMatrix
 
 def load_holiday(timeslots, datapath):
     fname=os.path.join(datapath, 'TaxiNYC', 'NY_Holiday.txt')
