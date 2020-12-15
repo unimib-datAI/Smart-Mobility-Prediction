@@ -106,7 +106,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     # 10 - 14
     data_all = []
     timestamps_all = list()
-    for year in range(10, 15):
+    for year in range(13, 15): # 10 Reduction dataset
         fname = os.path.join(
             datapath, 'TaxiNYC', 'NYC{}_Taxi_M16x8_T60_InOut.h5'.format(year))
         print("file name: ", fname)
@@ -140,7 +140,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     timestamps_Y = []
     for data, timestamps in zip(data_all_mmn, timestamps_all):
 
-        st = STMatrix(data, timestamps, T, CheckComplete=False, Hours0_23=False)
+        st = STMatrix(data, timestamps, T, CheckComplete=False, Hours0_23=True)
         _XC, _XP, _XT, _Y, _timestamps_Y = st.create_dataset(
             len_closeness=len_closeness, len_period=len_period, len_trend=len_trend)
         # _XCPT[:, 0:6, :, :] = _XC
@@ -160,7 +160,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
         Y.append(_Y)
 
         timestamps_Y += _timestamps_Y
-        
+
     Y = np.vstack(Y)
     XCPT = np.vstack(XCPT)
 
@@ -170,7 +170,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
     XCPT_train, Y_train = XCPT[:-len_val], Y[:-len_val]
     XCPT_val, Y_val = XCPT[-len_val:-len_test], Y[-len_val:-len_test]
     XCPT_test, Y_test = XCPT[-len_test:], Y[-len_test:]
-    
+
     timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = timestamps_Y[:-len_test], timestamps_Y[:-len_val], timestamps_Y[-len_val:-len_test], timestamps_Y[-len_test:]
 
     X_train_all, X_train, X_val, X_test = [], [], [], []
@@ -201,7 +201,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
             # load meteorol data
             meteorol_feature = load_meteorol(timestamps_Y, datapath)
             meta_feature.append(meteorol_feature)
-        
+
         meta_feature = np.hstack(meta_feature) if len(
             meta_feature) > 0 else np.asarray(meta_feature)
         metadata_dim = meta_feature.shape[1] if len(
@@ -209,7 +209,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
         metadata_dim = meta_feature.shape[1]
         meta_feature_train_all, meta_feature_train, meta_feature_val, meta_feature_test = meta_feature[
         :-len_test], meta_feature[:-len_val], meta_feature[-len_val:-len_test], meta_feature[-len_test:]
-        X_train_all.append(meta_feature_train_all)  
+        X_train_all.append(meta_feature_train_all)
         X_train.append(meta_feature_train)
         X_val.append(meta_feature_val)
         X_test.append(meta_feature_test)
@@ -217,7 +217,7 @@ def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=No
         metadata_dim = None
     for _X in X_train_all:
         print(_X.shape, )
-    print()    
+    print()
     for _X in X_train:
         print(_X.shape, )
     print()
