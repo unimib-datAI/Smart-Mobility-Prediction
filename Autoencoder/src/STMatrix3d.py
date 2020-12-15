@@ -4,16 +4,29 @@ import pandas as pd
 import numpy as np
 
 from . import *
+from . import string2timestamp as s2t
+
+def my_s2t(strings, T=48):
+    timestamps = []
+
+    time_per_slot = 24.0 / T
+    num_per_T = T // 24
+    for t in strings:
+        year, month, day, slot = int(t[:4]), int(t[4:6]), int(t[6:8]), int(t[8:])
+        timestamps.append(pd.Timestamp(datetime(year, month, day, hour=int(slot * time_per_slot), minute=(slot % num_per_T) * int(60.0 * time_per_slot))))
+
+    return timestamps
 
 class STMatrix(object):
     """docstring for STMatrix"""
 
-    def __init__(self, data, timestamps, T=48, CheckComplete=True):
+    def __init__(self, data, timestamps, T=48, CheckComplete=True, Hours0_23=False):
         super(STMatrix, self).__init__()
         assert len(data) == len(timestamps)
         self.data = data
         self.timestamps = timestamps
         self.T = T
+        string2timestamp = my_s2t if Hours0_23 else s2t
         self.pd_timestamps = string2timestamp(timestamps, T=self.T)
         if CheckComplete:
             self.check_complete()
@@ -60,15 +73,11 @@ class STMatrix(object):
         XT = []
         Y = []
         timestamps_Y = []
-        C_in_P = 2
-        C_in_T = 2
         depends = [range(1, len_closeness+1),
-                #    [PeriodInterval * self.T * j for j in range(1, len_period+1)],
-                #    [TrendInterval * self.T * j for j in range(1, len_trend+1)]]
-                  [i + PeriodInterval * self.T * j for j in range(1, len_period+1) for i in range(0, C_in_P)],
-                  [i + TrendInterval * self.T * j for j in range(1, len_trend+1) for i in range(0, C_in_T)]]
+                   [PeriodInterval * self.T * j for j in range(1, len_period+1)],
+                   [TrendInterval * self.T * j for j in range(1, len_trend+1)]]
 
-        i = max(self.T * TrendInterval * len_trend + C_in_T-1, self.T * PeriodInterval * len_period, len_closeness)
+        i = max(self.T * TrendInterval * len_trend, self.T * PeriodInterval * len_period, len_closeness)
         while i < len(self.pd_timestamps):
             Flag = True
             for depend in depends:
@@ -82,8 +91,9 @@ class STMatrix(object):
             x_c = [self.get_matrix(self.pd_timestamps[i] - j * offset_frame) for j in depends[0]]
             x_p = [self.get_matrix(self.pd_timestamps[i] - j * offset_frame) for j in depends[1]]
             x_t = [self.get_matrix(self.pd_timestamps[i] - j * offset_frame) for j in depends[2]]
-            # reverse per avere l'immagine piu' vecchia come primo elemento e la
-            # piu' recente come ultimo elemento
+            # reverse lists to have the oldest image as first element and the
+            # newest as last element
+            # i.e. [X(t-1),X(t-2),X(t-3),X(t-4)] -> [X(t-4),X(t-3),X(t-2),X(t-1)]
             x_c.reverse()
             x_p.reverse()
             x_t.reverse()
@@ -101,7 +111,7 @@ class STMatrix(object):
             timestamps_Y.append(self.timestamps[i])
             i += 1
         XC = np.asarray(XC)
-        XC = np.moveaxis(XC, 2, -1) # new
+        XC = np.moveaxis(XC, 2, -1) # new (channel_last)
         XP = np.asarray(XP)
         if (len_period > 0):
             XP = np.moveaxis(XP, 2, -1) # new
