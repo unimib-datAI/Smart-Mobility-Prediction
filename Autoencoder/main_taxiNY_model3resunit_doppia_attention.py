@@ -55,8 +55,8 @@ tf.random.set_seed(1234)
 model_name = 'model3resunit_doppia_attention'
 
 DATAPATH = '../data'
-nb_epoch = 150  # number of epoch at training stage
-T = 48  # number of time intervals in one day
+nb_epoch = 100  # number of epoch at training stage
+T = 24  # number of time intervals in one day
 CACHEDATA = True  # cache data or NOT
 
 len_closeness = 4  # length of closeness dependent sequence
@@ -68,7 +68,7 @@ days_test = 4*7 # 4 weeks
 len_test = T * days_test
 len_val = 2 * len_test
 
-map_height, map_width = 32, 32  # grid size
+map_height, map_width = 16, 8  # grid size
 
 cache_folder = 'Autoencoder/model3' if model_name in ['model3', 'model3attention', 'model3resunit', 'model3resunit_attention', 'model3resunit_doppia_attention'] else 'Autoencoder'
 path_cache = os.path.join(DATAPATH, 'CACHE', cache_folder)  # cache path
@@ -222,7 +222,7 @@ optimizer.maximize(init_points=2, n_iter=10)
 
 
 # New optimizer is loaded with previously seen points
-# load_logs(optimizer, logs=["./results/" + bs_fname])
+# load_logs(optimizer, logs=["./results/" + bs_fname], reset = False)
 # optimizer.maximize(init_points=10, n_iter=10)
 
 # training-test-evaluation iterations with best params
