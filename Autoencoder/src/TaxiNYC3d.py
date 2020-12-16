@@ -73,31 +73,6 @@ def load_meteorol(timeslots, datapath):
     # print('meger shape:', merge_data.shape)
     return merge_data
 
-def remove_incomplete_days(data, timestamps, T=24):
-    # remove a certain day which has not T timestamps
-    days = []  # available days: some day only contain some seqs
-    days_incomplete = []
-    i = 0
-    while i < len(timestamps):
-        if int(timestamps[i][8:]) != 0:
-            i += 1
-        elif i+T-1 < len(timestamps) and int(timestamps[i+T-1][8:]) == T-1:
-            days.append(timestamps[i][:8])
-            i += T
-        else:
-            days_incomplete.append(timestamps[i][:8])
-            i += 1
-    print("incomplete days: ", days_incomplete)
-    days = set(days)
-    idx = []
-    for i, t in enumerate(timestamps):
-        if t[:8] in days:
-            idx.append(i)
-
-    data = data[idx]
-    timestamps = [timestamps[i] for i in idx]
-    return data, timestamps
-
 def load_data(T=24, nb_flow=2, len_closeness=None, len_period=None, len_trend=None,
               len_test=None, len_val=None, preprocess_name='preprocessing_taxinyc.pkl',
               meta_data=True, meteorol_data=False, holiday_data=False, datapath=None):
