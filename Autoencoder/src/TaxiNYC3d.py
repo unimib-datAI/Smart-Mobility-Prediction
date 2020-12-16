@@ -22,6 +22,33 @@ def load_holiday(timeslots, datapath):
     return H[:, None]
 
 
+def remove_incomplete_days(data, timestamps, T=24):
+    # remove a certain day which has not T timestamps
+    days = []  # available days: some day only contain some seqs
+    days_incomplete = []
+    i = 0
+    while i < len(timestamps):
+        if int(timestamps[i][8:]) != 0:
+            i += 1
+        elif i+T-1 < len(timestamps) and int(timestamps[i+T-1][8:]) == T-1:
+            days.append(timestamps[i][:8])
+            i += T
+        else:
+            days_incomplete.append(timestamps[i][:8])
+            i += 1
+    print("incomplete days: ", days_incomplete)
+    days = set(days)
+    idx = []
+    for i, t in enumerate(timestamps):
+        if t[:8] in days:
+            idx.append(i)
+
+    data = data[idx]
+    timestamps = [timestamps[i] for i in idx]
+    return data, timestamps
+
+
+
 def load_meteorol(timeslots, datapath):
     '''
     timeslots: the predicted timeslots
