@@ -207,9 +207,9 @@ def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False,
 
 # bayesian optimization
 optimizer = BayesianOptimization(f=train_model,
-                              pbounds={'encoder_blocks': (3, 3),
+                              pbounds={'encoder_blocks': (2, 2),
                                        'lr': (0.001, 0.0001),
-                                       'batch_size': (1, 2.999), # *16
+                                       'batch_size': (1, 3.999), # *16
                                        'kernel_size': (3, 4.999)
                               },
                               verbose=2)
