@@ -55,7 +55,7 @@ tf.random.set_seed(1234)
 model_name = 'model3resunit_doppia_attention'
 
 DATAPATH = '../data'
-nb_epoch = 100  # number of epoch at training stage
+nb_epoch = 1  # number of epoch at training stage
 T = 24  # number of time intervals in one day
 CACHEDATA = True  # cache data or NOT
 
@@ -240,10 +240,10 @@ with open(os.path.join('results', params_fname), 'w') as f:
     json.dump(params, f, indent=2)
 with open(os.path.join('results', params_fname), 'r') as f:
     params = json.load(f)
-for i in range(0, 10):
-    train_model(encoder_blocks=params['encoder_blocks'],
-                lr=params['lr'],
-                batch_size=params['batch_size'],
-                kernel_size=params['kernel_size'],
-                save_results=True,
-                i=i)
+#for i in range(0, 10):
+#    train_model(encoder_blocks=params['encoder_blocks'],
+#                lr=params['lr'],
+#                batch_size=params['batch_size'],
+#                kernel_size=params['kernel_size'],
+#                save_results=True,
+#                i=i)
