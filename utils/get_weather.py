@@ -4,7 +4,7 @@ import json
 from calendar import monthrange
 import numpy as np
 
-import secrets # file where api_key is saved
+from secrets import * # file where api_key is saved
 
 '''
 script used to generate weather info of newyork city from 2010-01-01 to 2014-12-31
