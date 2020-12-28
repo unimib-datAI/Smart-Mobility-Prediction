@@ -37,7 +37,13 @@ models_dict = {
 }
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
-tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6144)])
+if gpus:
+    try:
+        for gpu in gpus:  # Currently, memory growth needs to be the same across GPUs
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)  # Memory growth must be set before GPUs have been initializ
+
 
 np.random.seed(1234)
 tf.random.set_seed(1234)
