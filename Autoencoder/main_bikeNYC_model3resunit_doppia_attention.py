@@ -43,7 +43,7 @@ np.random.seed(1234)
 tf.random.set_seed(1234)
 
 # parameters
-model_name = 'model3resunit_attention'
+model_name = 'model3resunit_doppia_attention'  #'model3resunit_attention'
 
 DATAPATH = '../data'
 nb_epoch = 150  # number of epoch at training stage

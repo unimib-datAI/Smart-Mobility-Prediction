@@ -215,7 +215,7 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
     main_inputs = []
     #ENCODER
     # input layer tx32x32x2
-    t = len_c+len_p*2+len_t*2
+    t = len_c+len_p+len_t   #len_p*2+len_t*2
     input = Input(shape=((t, map_height, map_width, nb_flow)))
     main_inputs.append(input)
     x = input
