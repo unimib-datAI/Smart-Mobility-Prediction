@@ -13,6 +13,13 @@ def load_stdata(fname):
     f.close()
     return data, timestamps
 
+def adjust_timeslots(timeslot):
+    timeslot_str = timeslot.decode("utf-8")
+    interval = timeslot_str[-2:]
+    new_interval = f'{int(interval)+1:02}'
+    return bytes(timeslot_str[:-2] + new_interval, encoding='utf8')
+    # return bytes(timeslot_str[:-4] + timeslot_str[-2:], encoding='utf8')
+
 def remove_incomplete_days(data, timestamps, T=48, h0_23=False):
     # remove a certain day which has not 48 timestamps
     days = []  # available days: some day only contain some seqs
@@ -109,3 +116,43 @@ def load_data_taxiBJ(datapath):
     print('data shape: ' + str(data_all.shape))
 
     return data_all, timestamps_all
+
+def load_data_Rome(datapath):
+    nb_flow = 2 # i.e. inflow and outflow
+    T = 24*4 # number timestamps per day
+
+    # load data
+    # fname = os.path.join(datapath, 'Roma', 'Centro', 'Roma_32x32_15_minuti.h5')
+    fname = os.path.join(datapath, 'Roma', 'AllMap', 'Roma_32x32_15_minuti_north.h5')
+    
+    print("file name: ", fname)
+    data, timestamps = load_stdata(fname)
+    # timestamps = np.array([adjust_timeslots(t) for t in timestamps])
+
+    # print(timestamps)
+    # remove a certain day which does not have 48 timestamps
+    data, timestamps = remove_incomplete_days(data, timestamps, T)
+    data = data[:, :nb_flow]
+    data[data < 0] = 0.
+    print('data shape: ' + str(data.shape))
+
+    return data, timestamps
+
+def load_data_Rome_1ora(datapath):
+    nb_flow = 2 # i.e. inflow and outflow
+    T = 24 # number timestamps per day
+
+    # load data
+    fname = os.path.join(datapath, 'Roma', 'Roma_16x16_1_ora.h5')
+    print("file name: ", fname)
+    data, timestamps = load_stdata(fname)
+    timestamps = np.array([adjust_timeslots(t) for t in timestamps])
+
+    # print(timestamps)
+    # remove a certain day which does not have 48 timestamps
+    data, timestamps = remove_incomplete_days(data, timestamps, T)
+    data = data[:, :nb_flow]
+    data[data < 0] = 0.
+    print('data shape: ' + str(data.shape))
+
+    return data, timestamps
