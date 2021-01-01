@@ -75,7 +75,7 @@ nb_area = 81
 m_factor = math.sqrt(1. * map_height * map_width / nb_area)
 # print('factor: ', m_factor)
 
-cache_folder = 'Autoencoder/model3' if model_name in ['model3', 'model3attention', 'model3resunit', 'model3resunit_attention'] else 'Autoencoder'
+cache_folder = 'Autoencoder/model3' if model_name.startswith('model3') else 'Autoencoder'
 path_cache = os.path.join(DATAPATH, 'CACHE', cache_folder)  # cache path
 path_result = 'RET'
 path_model = 'MODEL'
