@@ -69,7 +69,7 @@ class Recalibration_T(Layer):
     def __init__(self,channel,**kwargs):
         super(Recalibration_T, self).__init__(**kwargs)
         self.channel = channel
-    
+
     def get_config(self):
         config = super().get_config().copy()
         config.update({
@@ -190,9 +190,9 @@ def ST3DNet(c_conf=(6, 2, 16, 8), t_conf=(4, 2, 16, 8), external_dim=8, nb_resid
         # external input
         external_input = Input(shape=(external_dim,))
         main_inputs.append(external_input)
-        embedding = Dense(output_dim=10)(external_input)
+        embedding = Dense(10)(external_input)
         embedding = Activation('relu')(embedding)
-        h1 = Dense(output_dim=nb_flow * map_height * map_width)(embedding)
+        h1 = Dense(nb_flow * map_height * map_width)(embedding)
         activation = Activation('relu')(h1)
         external_output = Reshape((nb_flow, map_height, map_width))(activation)
         main_output = keras.layers.Add()([main_output, external_output])
