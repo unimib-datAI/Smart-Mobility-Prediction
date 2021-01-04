@@ -83,7 +83,7 @@ def cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_tes
     h5.create_dataset('T_test', data=timestamp_test)
     h5.close()
 
-DATAPATH = '../data'  
+DATAPATH = '../data'
 CACHEDATA = True  # cache data or NOT
 T = 24*4  # number of time intervals in one day
 lr = 0.00015 # learning rate
@@ -92,7 +92,7 @@ len_closeness = 3 # length of closeness dependent sequence
 len_period = 1 # length of peroid dependent sequence
 len_trend = 1 # length of trend dependent sequence
 nb_residual_unit = 6
-nb_flow = 2  
+nb_flow = 2
 days_test = 7
 len_test = T*days_test
 len_val = len_test # no val
@@ -132,8 +132,8 @@ print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
 print('=' * 10)
 
 # build model
-tf.keras.backend.set_image_data_format('channels_first')
-tf.keras.backend.image_data_format()
+tf.keras.backend.set_image_data_format('channels_first') # set the image format
+tf.keras.backend.image_data_format() # returns the default image data format convention
 model = build_model(external_dim, save_model_pic=False)
 
 # load weights
@@ -175,7 +175,7 @@ h5.create_dataset('max', data=mmn._max)
 h5.close()
 
 ### 16x8
-DATAPATH = '../data'  
+DATAPATH = '../data'
 CACHEDATA = True  # cache data or NOT
 T = 24  # number of time intervals in one day
 lr = 0.00015 # learning rate
@@ -184,7 +184,7 @@ len_closeness = 3 # length of closeness dependent sequence
 len_period = 1 # length of peroid dependent sequence
 len_trend = 1 # length of trend dependent sequence
 nb_residual_unit = 2
-nb_flow = 2  
+nb_flow = 2
 days_test = 7
 len_test = T*days_test
 len_val = len_test # no val
@@ -217,8 +217,8 @@ print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
 print('=' * 10)
 
 # build model
-tf.keras.backend.set_image_data_format('channels_first')
-tf.keras.backend.image_data_format()
+tf.keras.backend.set_image_data_format('channels_first') # set the image format
+tf.keras.backend.image_data_format() # returns the default image data format convention
 model = build_model(external_dim, save_model_pic=False, bn=True)
 
 # load weights
