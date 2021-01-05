@@ -155,7 +155,7 @@ for i in range(0,10):
     # evaluate model
     print('evaluating using the model that has the best loss on the valid set')
     model.load_weights(fname_param) # load best weights for current iteration
-    
+
     Y_pred = model.predict(X_test) # compute predictions
 
     score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1) # evaluate performance
