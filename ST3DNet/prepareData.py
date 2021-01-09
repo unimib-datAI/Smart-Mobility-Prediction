@@ -546,13 +546,13 @@ def load_data_TaxiBJ(T=48, nb_flow=2, len_closeness=None, len_period=None, len_t
     print()
     return X_train, Y_train, X_test, Y_test, mmn, metadata_dim, timestamp_train, timestamp_test
 
-def load_data_carRome(T=24*4, nb_flow=2, len_closeness=None, len_period=None, len_trend=None,
+def load_data_carRome(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=None,
               len_test=None, preprocess_name='preprocessing.pkl',
               meta_data=True, meteorol_data=False, holiday_data=True, datapath=None, shape=(32,32)):
     assert(len_closeness + len_period + len_trend > 0)
     # load data
     if (shape == (32,32)):
-        data, timestamps = load_stdata(os.path.join(datapath, 'Roma', 'AllMap', 'Roma_32x32_15_minuti_north.h5'))
+        data, timestamps = load_stdata(os.path.join(datapath, 'Roma', 'AllMap', 'Roma_32x32_30_minuti_north.h5'))
     else:
         data, timestamps = load_stdata(os.path.join(datapath, 'Roma', 'AllMap', 'Roma_16x8_1_ora_resize_north.h5'))
     # print(len(timestamps))
@@ -914,7 +914,7 @@ def load_data_taxiNYC(T=24, nb_flow=2, len_closeness=None, len_period=None, len_
 
 ### load and cache RomaNord32x32 data
 DATAPATH = '../data'
-T = 24*4  # number of time intervals in one day
+T = 24*2  # number of time intervals in one day
 len_closeness = 6  # length of closeness dependent sequence
 len_period = 0  # length of peroid dependent sequence
 len_trend = 2  # length of trend dependent sequence
