@@ -61,13 +61,13 @@ def load_holiday(timeslots, datapath):
     # print(timeslots[H==1])
     return H[:, None]
 
-def load_data(T=24*4, nb_flow=2, len_closeness=None, len_period=None, len_trend=None,
+def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=None,
               len_test=None, len_val=None, preprocess_name='preprocessing.pkl',
               meta_data=True, meteorol_data=False, holiday_data=True, datapath=None, shape=(32,32)):
     assert(len_closeness + len_period + len_trend > 0)
     # load data
     if (shape == (32,32)):
-        data, timestamps = load_stdata(os.path.join(datapath, 'Roma', 'AllMap', 'Roma_32x32_15_minuti_north.h5'))
+        data, timestamps = load_stdata(os.path.join(datapath, 'Roma', 'AllMap', 'Roma_32x32_30_minuti_north.h5'))
     else:
         data, timestamps = load_stdata(os.path.join(datapath, 'Roma', 'AllMap', 'Roma_16x8_1_ora_resize_north.h5'))
     print(len(timestamps))
