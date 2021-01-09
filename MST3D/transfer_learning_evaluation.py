@@ -17,6 +17,25 @@ from deepst.model import mst3d_bj_2, mst3d_nyc_2
 from deepst.evaluation import evaluate
 
 
+def save_to_csv(score, csv_name):
+    if not os.path.isfile(csv_name):
+        if os.path.isdir('results') is False:
+            os.mkdir('results')
+        with open(csv_name, 'a', encoding = "utf-8") as file:
+            file.write(
+                    'rsme_in,rsme_out,rsme_tot,'
+                    'mape_in,mape_out,mape_tot,'
+                    'ape_in,ape_out,ape_tot'
+                    )
+            file.write("\n")
+            file.close()
+    with open(csv_name, 'a', encoding = "utf-8") as file:
+        file.write(f'{score[0]},{score[1]},{score[2]},{score[3]},'
+                f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
+                )
+        file.write("\n")
+        file.close()
+
 def build_model_bj(save_model_pic=False):
     model = mst3d_bj_2(len_closeness, len_period, len_trend, nb_flow, map_height, map_width, external_dim)
     adam = Adam(lr=lr)
@@ -86,8 +105,8 @@ path_cache = os.path.join(DATAPATH, 'CACHE', 'MST3D')  # cache path
 # nb_epoch = 100  # number of epoch at training stage
 # nb_epoch_cont = 100  # number of epoch at training (cont) stage
 # batch_size = 64  # batch size
-T = 24*4  # number of time intervals in one day
-lr = 0.0002  # learning rate
+T = 24*2  # number of time intervals in one day
+lr = 0.0001  # learning rate
 len_closeness = 4  # length of closeness dependent sequence - should be 6
 len_period = 4  # length of peroid dependent sequence
 len_trend = 2  # length of trend dependent sequence
@@ -127,6 +146,31 @@ print('=' * 10)
 # build model
 model = build_model_bj(save_model_pic=False)
 
+## single-step-prediction no TL
+nb_epoch = 100
+batch_size = 16
+hyperparams_name = 'mst3d_roma32x32'
+fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+history = model.fit(X_train, Y_train,
+                    epochs=nb_epoch,
+                    batch_size=batch_size,
+                    validation_data=(X_test, Y_test),
+                    callbacks=[model_checkpoint],
+                    verbose=2)
+
+# predict
+Y_pred = model.predict(X_test)  # compute predictions
+
+# evaluate
+score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
+
+# save to csv
+csv_name = os.path.join('results', f'roma32x32_results.csv')
+save_to_csv(score, csv_name)
+
+## TL without re-training
 # load weights
 model_fname = 'TaxiBJ.c4.p4.t2.iter6.best.h5'
 model.load_weights(os.path.join('../best_models', 'MST3D', model_fname))
@@ -139,23 +183,7 @@ score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
 
 # save to csv
 csv_name = os.path.join('results', f'TL_taxiBJ_roma32x32_results.csv')
-if not os.path.isfile(csv_name):
-    if os.path.isdir('results') is False:
-        os.mkdir('results')
-    with open(csv_name, 'a', encoding = "utf-8") as file:
-        file.write(
-                'rsme_in,rsme_out,rsme_tot,'
-                'mape_in,mape_out,mape_tot,'
-                'ape_in,ape_out,ape_tot'
-                )
-        file.write("\n")
-        file.close()
-with open(csv_name, 'a', encoding = "utf-8") as file:
-    file.write(f'{score[0]},{score[1]},{score[2]},{score[3]},'
-            f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
-            )
-    file.write("\n")
-    file.close()
+save_to_csv(score, csv_name)
 
 # save real vs predicted
 fname = 'mst3d_RomaNord32x32.h5'
@@ -166,6 +194,41 @@ h5.create_dataset('timestamps', data=timestamp_test)
 h5.create_dataset('max', data=mmn._max)
 h5.close()
 
+## TL with re-training
+nb_epoch = 100
+batch_size = 16
+hyperparams_name = 'TaxiBJ_Rome'
+fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+history = model.fit(X_train, Y_train,
+                    epochs=nb_epoch,
+                    batch_size=batch_size,
+                    validation_data=(X_test, Y_test),
+                    callbacks=[model_checkpoint],
+                    verbose=2)
+
+# evaluate after training
+model.load_weights(fname_param)
+Y_pred = model.predict(X_test)  # compute predictions
+
+# evaluate
+score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
+
+# save to csv
+csv_name = os.path.join('results', f'TL_taxiBJ_roma32x32_training_results.csv')
+save_to_csv(score, csv_name)
+
+# save real vs predicted
+fname = 'mst3d_RomaNord32x32_trained.h5'
+h5 = h5py.File(fname, 'w')
+h5.create_dataset('Y_real', data=Y_test)
+h5.create_dataset('Y_pred', data=Y_pred)
+h5.create_dataset('timestamps', data=timestamp_test)
+h5.create_dataset('max', data=mmn._max)
+h5.close()
+
+
 ### 16x8
 # parameters
 DATAPATH = '../data'
@@ -175,7 +238,7 @@ path_cache = os.path.join(DATAPATH, 'CACHE', 'MST3D')  # cache path
 # nb_epoch_cont = 100  # number of epoch at training (cont) stage
 # batch_size = 16  # batch size
 T = 24  # number of time intervals in one day
-lr = 0.00034  # learning rate
+lr = 0.0001  # learning rate
 len_closeness = len_c = 4  # length of closeness dependent sequence - should be 6
 len_period = len_p = 4  # length of peroid dependent sequence
 len_trend = len_t = 2  # length of trend dependent sequence
@@ -219,6 +282,31 @@ model = build_model_ny(
     lr=lr
 )
 
+## single-step-prediction no TL
+nb_epoch = 100
+batch_size = 16
+hyperparams_name = 'mst3d_roma16x8'
+fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+history = model.fit(X_train, Y_train,
+                    epochs=nb_epoch,
+                    batch_size=batch_size,
+                    validation_data=(X_test, Y_test),
+                    callbacks=[model_checkpoint],
+                    verbose=2)
+
+# predict
+Y_pred = model.predict(X_test)  # compute predictions
+
+# evaluate
+score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
+
+# save to csv
+csv_name = os.path.join('results', f'roma16x8_results.csv')
+save_to_csv(score, csv_name)
+
+## TL without re-training
 # load weights
 model_fname = 'TaxiNYC1.c4.p4.t2.lr_0.00034.batchsize_16.best.h5'
 model.load_weights(os.path.join('../best_models', 'MST3D', model_fname))
@@ -231,26 +319,44 @@ score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
 
 # save to csv
 csv_name = os.path.join('results', f'TL_taxiNY_roma16x8_results.csv')
-if not os.path.isfile(csv_name):
-    if os.path.isdir('results') is False:
-        os.mkdir('results')
-    with open(csv_name, 'a', encoding = "utf-8") as file:
-        file.write(
-                'rsme_in,rsme_out,rsme_tot,'
-                'mape_in,mape_out,mape_tot,'
-                'ape_in,ape_out,ape_tot'
-                )
-        file.write("\n")
-        file.close()
-with open(csv_name, 'a', encoding = "utf-8") as file:
-    file.write(f'{score[0]},{score[1]},{score[2]},{score[3]},'
-            f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
-            )
-    file.write("\n")
-    file.close()
+save_to_csv(score, csv_name)
 
 # save real vs predicted
 fname = 'mst3d_RomaNord16x8.h5'
+h5 = h5py.File(fname, 'w')
+h5.create_dataset('Y_real', data=Y_test)
+h5.create_dataset('Y_pred', data=Y_pred)
+h5.create_dataset('timestamps', data=timestamp_test)
+h5.create_dataset('max', data=mmn._max)
+h5.close()
+
+## TL with re-training
+nb_epoch = 100
+batch_size = 16
+hyperparams_name = 'TaxiNY_Rome'
+fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+history = model.fit(X_train, Y_train,
+                    epochs=nb_epoch,
+                    batch_size=batch_size,
+                    validation_data=(X_test, Y_test),
+                    callbacks=[model_checkpoint],
+                    verbose=2)
+
+# evaluate after training
+model.load_weights(fname_param)
+Y_pred = model.predict(X_test)  # compute predictions
+
+# evaluate
+score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
+
+# save to csv
+csv_name = os.path.join('results', f'TL_taxiNY_roma16x8_training_results.csv')
+save_to_csv(score, csv_name)
+
+# save real vs predicted
+fname = 'model3_RomaNord16x8_trained.h5'
 h5 = h5py.File(fname, 'w')
 h5.create_dataset('Y_real', data=Y_test)
 h5.create_dataset('Y_pred', data=Y_pred)
