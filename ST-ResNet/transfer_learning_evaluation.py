@@ -16,16 +16,33 @@ import deepst.metrics as metrics
 from deepst.datasets import carRome
 from deepst.evaluation import evaluate
 
+def save_to_csv(score, csv_name):
+    if not os.path.isfile(csv_name):
+        if os.path.isdir('results') is False:
+            os.mkdir('results')
+        with open(csv_name, 'a', encoding = "utf-8") as file:
+            file.write(
+                    'rsme_in,rsme_out,rsme_tot,'
+                    'mape_in,mape_out,mape_tot,'
+                    'ape_in,ape_out,ape_tot'
+                    )
+            file.write("\n")
+            file.close()
+    with open(csv_name, 'a', encoding = "utf-8") as file:
+        file.write(f'{score[0]},{score[1]},{score[2]},{score[3]},'
+                f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
+                )
+        file.write("\n")
+        file.close()
+
+
 ### 32x32
 # parameters
 DATAPATH = '../data'
 CACHEDATA = True  # cache data or NOT
 path_cache = os.path.join(DATAPATH, 'CACHE', 'ST-ResNet')  # cache path
-# nb_epoch = 500  # number of epoch at training stage
-# nb_epoch_cont = 100  # number of epoch at training (cont) stage
-# batch_size = 32  # batch size
-lr = 0.0002  # learning rate
-T = 24*4  # number of time intervals in one day
+lr = 0.0001 # learning rate
+T = 24*2 # number of time intervals in one day
 len_closeness = 3  # length of closeness dependent sequence
 len_period = 1  # length of peroid dependent sequence
 len_trend = 1  # length of trend dependent sequence
@@ -115,6 +132,32 @@ print('=' * 10)
 # build model
 model = build_model(external_dim, save_model_pic=False)
 
+## single-step-prediction no TL
+nb_epoch = 100
+batch_size = 16
+hyperparams_name = 'stresnet_roma32x32'
+fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+history = model.fit(X_train, Y_train,
+                    epochs=nb_epoch,
+                    batch_size=batch_size,
+                    validation_data=(X_test, Y_test),
+                    callbacks=[model_checkpoint],
+                    verbose=2)
+
+# predict
+Y_pred = model.predict(X_test)  # compute predictions
+
+# evaluate
+score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
+
+# save to csv
+csv_name = os.path.join('results', f'roma32x32_results.csv')
+save_to_csv(score, csv_name)
+
+
+## TL without re-training
 # load weights
 model_fname = 'TaxiBJ.c3.p1.t1.resunit12.iter8.noMeteo.cont.best.h5'
 model.load_weights(os.path.join('../best_models', 'ST-ResNet', model_fname))
@@ -126,23 +169,7 @@ score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
 
 # save to csv
 csv_name = os.path.join('results', f'TL_taxiBJ_roma32x32_results.csv')
-if not os.path.isfile(csv_name):
-    if os.path.isdir('results') is False:
-        os.mkdir('results')
-    with open(csv_name, 'a', encoding = "utf-8") as file:
-        file.write(
-                'rsme_in,rsme_out,rsme_tot,'
-                'mape_in,mape_out,mape_tot,'
-                'ape_in,ape_out,ape_tot'
-                )
-        file.write("\n")
-        file.close()
-with open(csv_name, 'a', encoding = "utf-8") as file:
-    file.write(f'{score[0]},{score[1]},{score[2]},{score[3]},'
-            f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
-            )
-    file.write("\n")
-    file.close()
+save_to_csv(score, csv_name)
 
 # save real vs predicted
 fname = 'stresnet_RomaNord32x32.h5'
@@ -153,7 +180,42 @@ h5.create_dataset('timestamps', data=timestamp_test)
 h5.create_dataset('max', data=mmn._max)
 h5.close()
 
-### 16x6
+## TL with re-training
+nb_epoch = 100
+batch_size = 16
+hyperparams_name = 'TaxiBJ_Rome'
+fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+history = model.fit(X_train, Y_train,
+                    epochs=nb_epoch,
+                    batch_size=batch_size,
+                    validation_data=(X_test, Y_test),
+                    callbacks=[model_checkpoint],
+                    verbose=2)
+
+# evaluate after training
+model.load_weights(fname_param)
+Y_pred = model.predict(X_test)  # compute predictions
+
+# evaluate
+score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
+
+# save to csv
+csv_name = os.path.join('results', f'TL_taxiBJ_roma32x32_training_results.csv')
+save_to_csv(score, csv_name)
+
+# save real vs predicted
+fname = 'stresnet_RomaNord32x32_trained.h5'
+h5 = h5py.File(fname, 'w')
+h5.create_dataset('Y_real', data=Y_test)
+h5.create_dataset('Y_pred', data=Y_pred)
+h5.create_dataset('timestamps', data=timestamp_test)
+h5.create_dataset('max', data=mmn._max)
+h5.close()
+
+
+### 16x8
 # params
 T = 24  # number of time intervals in one day
 len_closeness = 3  # length of closeness dependent sequence
@@ -188,6 +250,32 @@ print('=' * 10)
 # build model
 model = build_model(external_dim, save_model_pic=False, bn=True)
 
+## single-step-prediction no TL
+nb_epoch = 100
+batch_size = 16
+hyperparams_name = 'stresnet_roma16x8'
+fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+history = model.fit(X_train, Y_train,
+                    epochs=nb_epoch,
+                    batch_size=batch_size,
+                    validation_data=(X_test, Y_test),
+                    callbacks=[model_checkpoint],
+                    verbose=2)
+
+# predict
+Y_pred = model.predict(X_test)  # compute predictions
+
+# evaluate
+score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
+
+# save to csv
+csv_name = os.path.join('results', f'roma16x8_results.csv')
+save_to_csv(score, csv_name)
+
+
+## TL without re-training
 # load weights
 model_fname = 'TaxiNYC4.c3.p1.t1.resunits_4.lr_0.0001.batchsize_16.best.h5'
 model.load_weights(os.path.join('../best_models', 'ST-ResNet', model_fname))
@@ -199,26 +287,44 @@ score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
 
 # save to csv
 csv_name = os.path.join('results', f'TL_taxiNY_roma16x8_results.csv')
-if not os.path.isfile(csv_name):
-    if os.path.isdir('results') is False:
-        os.mkdir('results')
-    with open(csv_name, 'a', encoding = "utf-8") as file:
-        file.write(
-                'rsme_in,rsme_out,rsme_tot,'
-                'mape_in,mape_out,mape_tot,'
-                'ape_in,ape_out,ape_tot'
-                )
-        file.write("\n")
-        file.close()
-with open(csv_name, 'a', encoding = "utf-8") as file:
-    file.write(f'{score[0]},{score[1]},{score[2]},{score[3]},'
-            f'{score[4]},{score[5]},{score[6]},{score[7]},{score[8]}'
-            )
-    file.write("\n")
-    file.close()
+save_to_csv(score, csv_name)
 
 # save real vs predicted
 fname = 'stresnet_RomaNord16x8.h5'
+h5 = h5py.File(fname, 'w')
+h5.create_dataset('Y_real', data=Y_test)
+h5.create_dataset('Y_pred', data=Y_pred)
+h5.create_dataset('timestamps', data=timestamp_test)
+h5.create_dataset('max', data=mmn._max)
+h5.close()
+
+## TL with re-training
+nb_epoch = 100
+batch_size = 16
+hyperparams_name = 'TaxiNY_Rome'
+fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
+model_checkpoint = ModelCheckpoint(
+        fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
+history = model.fit(X_train, Y_train,
+                    epochs=nb_epoch,
+                    batch_size=batch_size,
+                    validation_data=(X_test, Y_test),
+                    callbacks=[model_checkpoint],
+                    verbose=2)
+
+# evaluate after training
+model.load_weights(fname_param)
+Y_pred = model.predict(X_test)  # compute predictions
+
+# evaluate
+score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
+
+# save to csv
+csv_name = os.path.join('results', f'TL_taxiNY_roma16x8_training_results.csv')
+save_to_csv(score, csv_name)
+
+# save real vs predicted
+fname = 'stresnet_RomaNord16x8_trained.h5'
 h5 = h5py.File(fname, 'w')
 h5.create_dataset('Y_real', data=Y_test)
 h5.create_dataset('Y_pred', data=Y_pred)
