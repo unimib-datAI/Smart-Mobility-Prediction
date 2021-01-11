@@ -161,7 +161,77 @@ def ha_prediction_taxiNYC():
     save_to_csv('HA', 'TaxiNYC', score)
 
 
+def ha_prediction_RomaNord():
+    datapath = '../data'
+    nb_flow = 2 # i.e. inflow and outflow
+    T = 48 # number timestamps per day
+    len_test = T * 7 # number of timestamps to predict
+
+    # load data
+    fname = os.path.join(datapath, 'Roma', 'AllMap', 'Roma_32x32_30_minuti_north.h5')
+    
+    print("file name: ", fname)
+    data, timestamps = load_stdata(fname)
+    # timestamps = np.array([adjust_timeslots(t) for t in timestamps])
+
+    # print(timestamps)
+    # remove a certain day which does not have 48 timestamps
+    data, timestamps = remove_incomplete_days(data, timestamps, T)
+    data = data[:, :nb_flow]
+    data[data < 0] = 0.
+    print('data shape: ' + str(data.shape))
+
+    # make predictions
+    predicted_data = ha_prediction(data, timestamps, T, len_test)
+
+    # evaluate
+    print('Evaluating on RomaNord')
+    real_data = data[-len_test:]
+    score = evaluate(real_data, predicted_data)
+
+    # plot real vs prediction data of a region
+    # plot_region_data(real_data, predicted_data, (13,3), 0)
+
+    # save to csv
+    save_to_csv('HA', 'RomaNord', score)
+
+def ha_prediction_RomaNord16x8():
+    datapath = '../data'
+    nb_flow = 2 # i.e. inflow and outflow
+    T = 24 # number timestamps per day
+    len_test = T * 7 # number of timestamps to predict
+
+    # load data
+    fname = os.path.join(datapath, 'Roma', 'AllMap', 'Roma_16x8_1_ora_resize_north.h5')
+    
+    print("file name: ", fname)
+    data, timestamps = load_stdata(fname)
+    # timestamps = np.array([adjust_timeslots(t) for t in timestamps])
+
+    # print(timestamps)
+    # remove a certain day which does not have 48 timestamps
+    data, timestamps = remove_incomplete_days(data, timestamps, T)
+    data = data[:, :nb_flow]
+    data[data < 0] = 0.
+    print('data shape: ' + str(data.shape))
+
+    # make predictions
+    predicted_data = ha_prediction(data, timestamps, T, len_test)
+
+    # evaluate
+    print('Evaluating on RomaNord16x8')
+    real_data = data[-len_test:]
+    score = evaluate(real_data, predicted_data)
+
+    # plot real vs prediction data of a region
+    # plot_region_data(real_data, predicted_data, (13,3), 0)
+
+    # save to csv
+    save_to_csv('HA', 'RomaNord16x8', score)
+
 if __name__ == '__main__':
     ha_prediction_taxiBJ()
     ha_prediction_bikeNYC()
     ha_prediction_taxiNYC()
+    ha_prediction_RomaNord()
+    ha_prediction_RomaNord16x8()
