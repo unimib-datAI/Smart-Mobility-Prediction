@@ -2,7 +2,7 @@ import numpy as np
 import os
 from copy import copy
 
-from star.evaluation import evaluate
+from deepst.evaluation import evaluate
 
 def multi_step_2D(model, x_test, y_test, mmn, len_closeness, step):
     # model = build_model(external_dim)
@@ -20,33 +20,23 @@ def multi_step_2D(model, x_test, y_test, mmn, len_closeness, step):
         # append in all step
         y_pre.append(y_pre_expand_dims)
 
-        x_test_noremove = x_test_now[0][1:]
-        x_test_noremove = x_test_noremove.transpose((1, 0, 2, 3))
-        x_test_noremove = x_test_noremove[len_closeness * nb_flow:]
-        x_test_noremove = x_test_noremove.transpose((1, 0, 2, 3))
-
         x_test_remove = x_test_now[0].transpose((1, 0, 2, 3))
-        x_test_remove = x_test_remove[:len_closeness * nb_flow]
-
         y_pre_remove = y_pre_inference.transpose((1, 0, 2, 3))
 
-        if len_closeness > 1:
-            for j in range(len_closeness * nb_flow, 3, -nb_flow):
-                x_test_remove[j - 2:j] = x_test_remove[j - 4:j - 2]  #
-            x_test_remove[0:2] = y_pre_remove
-        else:
-            x_test_remove[0:2] = y_pre_remove
+        for j in range(len_closeness * nb_flow, len_closeness, -nb_flow):
+            x_test_remove[j - 2:j] = x_test_remove[j - 4:j - 2]  #
+        x_test_remove[0:2] = y_pre_remove
 
         x_test_remove = x_test_remove.transpose((1, 0, 2, 3))
         x_test_remove = x_test_remove[:-1]
 
-        x_test_next = np.concatenate((x_test_remove, x_test_noremove), axis=1)
+        x_test_next = [x_test_remove] # new closeness component
+        x_test_next.append(x_test_now[1][1:]) # new period component
+        x_test_next.append(x_test_now[2][1:]) # new trend component
         #
         # make training data
-        x_test_makeData = []
-
-        x_test_makeData.append(x_test_next)
-        x_test_makeData.append(x_test[1][i:])
+        x_test_makeData = x_test_next
+        x_test_makeData.append(x_test[-1][i:]) # meta feature
 
         x_test_now = x_test_makeData
 
