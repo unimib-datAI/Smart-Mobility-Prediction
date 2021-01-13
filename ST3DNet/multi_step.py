@@ -9,7 +9,7 @@ def transform(X, mmn):
     X = X * 2. - 1.
     return X
 
-def multi_step_2D(model, x_test, y_test, mmn, len_closeness, step):
+def multi_step_2D(model, x_test, y_test, mmn, len_closeness, external_dim, step):
     # model = build_model(external_dim)
     dict_multi_score = {}
     nb_flow = 2
@@ -39,7 +39,8 @@ def multi_step_2D(model, x_test, y_test, mmn, len_closeness, step):
         #
         # make training data
         x_test_makeData = x_test_next
-        x_test_makeData.append(x_test[-1][i:]) # meta feature
+        if (external_dim):
+            x_test_makeData.append(x_test[-1][i:]) # meta feature
 
         x_test_now = x_test_makeData
 
