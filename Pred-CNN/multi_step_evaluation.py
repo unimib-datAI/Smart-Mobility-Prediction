@@ -235,6 +235,6 @@ def bikenyc_evaluation():
 
 
 if (__name__ == '__main__'):
-    taxiBJ_evaluation()
+    taxibj_evaluation()
     taxiny_evaluation()
     bikenyc_evaluation()
