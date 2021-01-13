@@ -34,7 +34,7 @@ def save_to_csv(score, csv_name):
         file.write("\n")
         file.close()
 
-def taxiBJ_evaluation():
+def taxibj_evaluation():
     # parameters
     DATAPATH = '../data' 
     T = 48  # number of time intervals in one day
