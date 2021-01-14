@@ -12,7 +12,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from src.model import build_model
 import src.metrics as metrics
-from src.datasets import carRome
+from src.datasets import carRome2
 from src.evaluation import evaluate
 from cache_utils import cache, read_cache
 

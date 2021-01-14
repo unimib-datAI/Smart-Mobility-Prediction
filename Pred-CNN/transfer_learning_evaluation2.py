@@ -12,7 +12,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from src.net.model import build_model
 import src.metrics as metrics
-from src.datasets import carRome
+from src.datasets import carRome2
 from src.evaluation import evaluate
 from cache_utils import cache, read_cache
 
@@ -37,7 +37,7 @@ def save_to_csv(score, csv_name):
 
 ### 32x32
 # parameters
-DATAPATH = '../data' 
+DATAPATH = '../data'
 #T = 24*2  # number of time intervals in one day
 #CACHEDATA = True  # cache data or NOT
 #
@@ -186,7 +186,7 @@ filter_size = (3,3)
 encoder_length = 2
 decoder_length = 3
 
-nb_flow = 2  
+nb_flow = 2
 days_test = 7
 len_test = T*days_test
 len_val = len_test # no val
