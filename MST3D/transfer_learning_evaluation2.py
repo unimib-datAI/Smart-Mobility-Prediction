@@ -1,8 +1,9 @@
 from __future__ import print_function
 import os
-import _pickle as pickle
+import sys
+import pickle
+import time
 import numpy as np
-import math
 import h5py
 
 import tensorflow as tf
@@ -10,11 +11,10 @@ from keras import backend as K
 from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
-from src.model import build_model
-import src.metrics as metrics
-from src.datasets import carRome2
-from src.evaluation import evaluate
-from cache_utils import cache, read_cache
+import deepst.metrics as metrics
+from deepst.datasets import carRome
+from deepst.model import mst3d_bj_2, mst3d_nyc_2
+from deepst.evaluation import evaluate
 
 
 def save_to_csv(score, csv_name):
@@ -45,65 +45,126 @@ if gpus:
     except RuntimeError as e:
         print(e)  # Memory growth must be set before GPUs have been initialized
 
+
+
 path_model = 'MODEL_ROMA_BERGAMO'
 if os.path.isdir(path_model) is False:
     os.mkdir(path_model)
+
+def build_model_bj(save_model_pic=False):
+    model = mst3d_bj_2(len_closeness, len_period, len_trend, nb_flow, map_height, map_width, external_dim)
+    adam = Adam(lr=lr)
+    model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
+    # model.summary()
+    if (save_model_pic):
+        from keras.utils.vis_utils import plot_model
+        plot_model(model, to_file='TaxiBJ_model.png', show_shapes=True)
+    return model
+
+def build_model_ny(len_c, len_p, len_t, nb_flow, map_height, map_width,
+                external_dim, save_model_pic=False, lr=0.00015):
+    model = mst3d_nyc_2(
+      len_c, len_p, len_t,
+      nb_flow, map_height, map_width,
+      external_dim
+    )
+    adam = Adam(lr=lr)
+    model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
+    # model.summary()
+    if (save_model_pic):
+        from keras.utils.vis_utils import plot_model
+        plot_model(model, to_file='TaxiNYC_model.png', show_shapes=True)
+
+    return model
+
+def read_cache(fname, preprocess_name):
+    mmn = pickle.load(open(preprocess_name, 'rb'))
+
+    f = h5py.File(fname, 'r')
+    num = int(f['num'].value)
+    X_train, Y_train, X_test, Y_test = [], [], [], []
+    for i in range(num):
+        X_train.append(f['X_train_%i' % i].value)
+        X_test.append(f['X_test_%i' % i].value)
+    Y_train = f['Y_train'].value
+    Y_test = f['Y_test'].value
+    external_dim = f['external_dim'].value
+    timestamp_train = f['T_train'].value
+    timestamp_test = f['T_test'].value
+    f.close()
+
+    return X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test
+
+def cache(fname, X_train, Y_train, X_test, Y_test, external_dim, timestamp_train, timestamp_test):
+    h5 = h5py.File(fname, 'w')
+    h5.create_dataset('num', data=len(X_train))
+
+    for i, data in enumerate(X_train):
+        h5.create_dataset('X_train_%i' % i, data=data)
+    # for i, data in enumerate(Y_train):
+    for i, data in enumerate(X_test):
+        h5.create_dataset('X_test_%i' % i, data=data)
+    h5.create_dataset('Y_train', data=Y_train)
+    h5.create_dataset('Y_test', data=Y_test)
+    external_dim = -1 if external_dim is None else int(external_dim)
+    h5.create_dataset('external_dim', data=external_dim)
+    h5.create_dataset('T_train', data=timestamp_train)
+    h5.create_dataset('T_test', data=timestamp_test)
+    h5.close()
+
 ### 32x32
 # parameters
 DATAPATH = '../data'
-nb_epoch = 150  # number of epoch at training stage
-nb_epoch_cont = 150  # number of epoch at training (cont) stage
-batch_size = 64  # batch size
-T = 24*2  # number of time intervals in one day
 CACHEDATA = True  # cache data or NOT
-
+path_cache = os.path.join(DATAPATH, 'CACHE', 'MST3D')  # cache path
+# nb_epoch = 100  # number of epoch at training stage
+# nb_epoch_cont = 100  # number of epoch at training (cont) stage
+# batch_size = 64  # batch size
+T = 24*2  # number of time intervals in one day
 lr = 0.0001  # learning rate
-len_c = 4  # length of closeness dependent sequence
-len_p = 1  # length of peroid dependent sequence
-len_t = 0  # length of trend dependent sequence
+len_closeness = 4  # length of closeness dependent sequence - should be 6
+len_period = 4  # length of peroid dependent sequence
+len_trend = 2  # length of trend dependent sequence
 
-nb_flow = 2  # there are two types of flows: new-flow and end-flow
-# divide data into two subsets: Train & Test
-days_test = 7
-len_test = T*days_test
-len_val = len_test # no val
+nb_flow = 2  # there are two types of flows: inflow and outflow
 
+days_test = 7 
+len_test = T * days_test
 map_height, map_width = 32, 32  # grid size
 
-path_cache = os.path.join(DATAPATH, 'CACHE', '3D-CLoST')  # cache path
 if CACHEDATA and os.path.isdir(path_cache) is False:
     os.mkdir(path_cache)
 
-# load dataadd_half
+# load data
 print("loading data...")
-preprocess_name = 'preprocessing_rome_2.pkl'
-fname = os.path.join(path_cache, 'Rome_C{}_P{}_T{}_2.h5'.format(
-    len_c, len_p, len_t))
+preprocess_name = 'preprocessing_rome.pkl'
+ts = time.time()
+fname = os.path.join(path_cache, 'Rome_C{}_P{}_T{}.h5'.format(
+    len_closeness, len_period, len_trend))
 if os.path.exists(fname) and CACHEDATA:
-    X_train_all, Y_train_all, X_train, Y_train, \
-    X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test, mask = read_cache(
+    X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = read_cache(
         fname, preprocess_name)
     print("load %s successfully" % fname)
 else:
-    X_train_all, Y_train_all, X_train, Y_train, \
-    X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test, mask = carRome2.load_data(
-        T=T, nb_flow=nb_flow, len_closeness=len_c, len_period=len_p, len_trend=len_t, len_test=len_test,
-        len_val=len_val, preprocess_name=preprocess_name, meta_data=True, holiday_data=True, meteorol_data=False, datapath=DATAPATH, add_half=True)
+    X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = carRome.load_data(
+        T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
+        preprocess_name=preprocess_name, meta_data=True, meteorol_data=False, holiday_data=True, datapath=DATAPATH)
     if CACHEDATA:
-        cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_test, Y_test,
-                external_dim, timestamp_train_all, timestamp_train, timestamp_val, timestamp_test, mask)
+        cache(fname, X_train, Y_train, X_test, Y_test,
+              external_dim, timestamp_train, timestamp_test)
+
+print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
+print("\nelapsed time (loading data): %.3f seconds\n" % (time.time() - ts))
+
+print('=' * 10)
 
 # build model
-model = build_model('BJ', X_train,  Y_train,  conv_filt=64, kernel_sz=(3,3,3),
-                    mask=mask, lstm=500, lstm_number=2, add_external_info=True,
-                    lr = 0.0001, save_model_pic=None)
+model = build_model_bj(save_model_pic=False)
 
 ## single-step-prediction no TL
 nb_epoch = 100
 batch_size = 16
-hyperparams_name = '3dclost_roma32x32'
+hyperparams_name = 'mst3d_roma32x32'
 fname_param = os.path.join('MODEL_ROMA_BERGAMO', '{}.best.h5'.format(hyperparams_name))
 model_checkpoint = ModelCheckpoint(
         fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
@@ -124,11 +185,10 @@ score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
 csv_name = os.path.join('results_roma_bergamo', f'roma32x32_results.csv')
 save_to_csv(score, csv_name)
 
-
 ## TL without re-training
 # load weights
-model_fname = 'TaxiBJ.c4.p1.t0.iter7add_half.best.noMeteo.h5'
-model.load_weights(os.path.join('../best_models', '3DCLoST', model_fname))
+model_fname = 'TaxiBJ.c4.p4.t2.iter6.best.h5'
+model.load_weights(os.path.join('../best_models', 'MST3D', model_fname))
 
 # predict
 Y_pred = model.predict(X_test)  # compute predictions
@@ -141,7 +201,7 @@ csv_name = os.path.join('results_roma_bergamo', f'TL_taxiBJ_roma32x32_results.cs
 save_to_csv(score, csv_name)
 
 # save real vs predicted
-fname = '3dclost_RomaNord32x32.h5'
+fname = 'mst3d_RomaNord32x32.h5'
 h5 = h5py.File(fname, 'w')
 h5.create_dataset('Y_real', data=Y_test)
 h5.create_dataset('Y_pred', data=Y_pred)
@@ -175,7 +235,7 @@ csv_name = os.path.join('results_roma_bergamo', f'TL_taxiBJ_roma32x32_training_r
 save_to_csv(score, csv_name)
 
 # save real vs predicted
-fname = '3dclost_RomaNord32x32_trained.h5'
+fname = 'mst3d_RomaNord32x32_trained.h5'
 h5 = h5py.File(fname, 'w')
 h5.create_dataset('Y_real', data=Y_test)
 h5.create_dataset('Y_pred', data=Y_pred)
@@ -185,51 +245,62 @@ h5.close()
 
 
 ### 16x8
-# params
+# parameters
+DATAPATH = '../data'
+CACHEDATA = True  # cache data or NOT
+path_cache = os.path.join(DATAPATH, 'CACHE', 'MST3D')  # cache path
+# nb_epoch = 100  # number of epoch at training stage
+# nb_epoch_cont = 100  # number of epoch at training (cont) stage
+# batch_size = 16  # batch size
 T = 24  # number of time intervals in one day
+lr = 0.0001  # learning rate
+len_closeness = len_c = 4  # length of closeness dependent sequence - should be 6
+len_period = len_p = 4  # length of peroid dependent sequence
+len_trend = len_t = 2  # length of trend dependent sequence
 
-len_closeness = len_c = 2  # length of closeness dependent sequence
-len_period = len_p = 0  # length of peroid dependent sequence
-len_trend = len_t = 1  # length of trend dependent sequence
+nb_flow = 2  # there are two types of flows: inflow and outflow
 
-nb_flow = 2  # there are two types of flows: new-flow and end-flow
-# divide data into two subsets: Train & Test,
-days_test = 7
-len_test = T*days_test
-len_val = len_test # no val
-
+days_test = 7 
+len_test = T * days_test
 map_height, map_width = 16, 8  # grid size
 
 # load data
 print("loading data...")
-preprocess_name = 'preprocessing_rome16x8_2.pkl'
-fname = os.path.join(path_cache, 'Rome16x8_C{}_P{}_T{}_2.h5'.format(
+preprocess_name = 'preprocessing_rome16x8.pkl'
+fname = os.path.join(path_cache, 'Rome16x8_C{}_P{}_T{}.h5'.format(
     len_c, len_p, len_t))
 if os.path.exists(fname) and CACHEDATA:
-    X_train_all, Y_train_all, X_train, Y_train, \
-    X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test, mask = read_cache(
+    X_train, Y_train, \
+    X_test, Y_test, mmn, external_dim, \
+    timestamp_train, timestamp_test = read_cache(
         fname, preprocess_name)
     print("load %s successfully" % fname)
 else:
-    X_train_all, Y_train_all, X_train, Y_train, \
-    X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test, mask = carRome2.load_data(
+    X_train, Y_train, \
+    X_test, Y_test, mmn, external_dim, \
+    timestamp_train, timestamp_test = carRome.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_c, len_period=len_p, len_trend=len_t, len_test=len_test,
-        len_val=len_val, preprocess_name=preprocess_name, meta_data=True, holiday_data=False, datapath=DATAPATH, shape=(16,8))
+        preprocess_name=preprocess_name, meta_data=True,
+        meteorol_data=True, holiday_data=True, datapath=DATAPATH, shape=(16,8))
     if CACHEDATA:
-        cache(fname, X_train_all, Y_train_all, X_train, Y_train, X_val, Y_val, X_test, Y_test,
-                external_dim, timestamp_train_all, timestamp_train, timestamp_val, timestamp_test, mask)
+        cache(fname, X_train, Y_train, X_test, Y_test,
+                external_dim, timestamp_train, timestamp_test)
+
+print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
+print('=' * 10)
 
 # build model
-model = build_model('NY', X_train,  Y_train, conv_filt=64, kernel_sz=(2,3,3),
-                mask=mask, lstm=500, lstm_number=2, add_external_info=True,
-                lr=0.0001, save_model_pic=None)
+model = build_model_ny(
+    len_c, len_p, len_t, nb_flow, map_height,
+    map_width, external_dim,
+    save_model_pic=False,
+    lr=lr
+)
 
 ## single-step-prediction no TL
 nb_epoch = 100
 batch_size = 16
-hyperparams_name = '3dclost_roma16x8'
+hyperparams_name = 'mst3d_roma16x8'
 fname_param = os.path.join('MODEL_ROMA_BERGAMO', '{}.best.h5'.format(hyperparams_name))
 model_checkpoint = ModelCheckpoint(
         fname_param, monitor='val_rmse', verbose=0, save_best_only=True, mode='min')
@@ -247,14 +318,13 @@ Y_pred = model.predict(X_test)  # compute predictions
 score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
 
 # save to csv
-csv_name = os.path.join('results_roma_bergamo', f'roma16x8_results_2.csv')
+csv_name = os.path.join('results_roma_bergamo', f'roma16x8_results.csv')
 save_to_csv(score, csv_name)
-
 
 ## TL without re-training
 # load weights
-model_fname = 'TaxiNYC3.c2.p0.t1.lstm_500.lstmnumber_2.lr_0.00076.batchsize_16.best.h5'
-model.load_weights(os.path.join('../best_models', '3DCLoST', model_fname))
+model_fname = 'TaxiNYC1.c4.p4.t2.lr_0.00034.batchsize_16.best.h5'
+model.load_weights(os.path.join('../best_models', 'MST3D', model_fname))
 
 # predict
 Y_pred = model.predict(X_test)  # compute predictions
@@ -267,7 +337,7 @@ csv_name = os.path.join('results_roma_bergamo', f'TL_taxiNY_roma16x8_results.csv
 save_to_csv(score, csv_name)
 
 # save real vs predicted
-fname = '3dclost_RomaNord16x8.h5'
+fname = 'mst3d_RomaNord16x8.h5'
 h5 = h5py.File(fname, 'w')
 h5.create_dataset('Y_real', data=Y_test)
 h5.create_dataset('Y_pred', data=Y_pred)
@@ -297,11 +367,11 @@ Y_pred = model.predict(X_test)  # compute predictions
 score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
 
 # save to csv
-csv_name = os.path.join('results_roma_bergamo', f'TL_taxiNY_roma16x8_training_results_2.csv')
+csv_name = os.path.join('results_roma_bergamo', f'TL_taxiNY_roma16x8_training_results.csv')
 save_to_csv(score, csv_name)
 
 # save real vs predicted
-fname = '3dclost_RomaNord16x8_trained.h5'
+fname = 'model3_RomaNord16x8_trained.h5'
 h5 = h5py.File(fname, 'w')
 h5.create_dataset('Y_real', data=Y_test)
 h5.create_dataset('Y_pred', data=Y_pred)

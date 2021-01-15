@@ -2,11 +2,12 @@
 from __future__ import print_function
 import os
 import _pickle as pickle
-import h5py
 import numpy as np
-from . import *
-from .minmax_normalization import MinMaxNormalization
-from .STMatrix import STMatrix
+import h5py
+from star import *
+from star.minmax_normalization import MinMaxNormalization
+from star.config import Config
+from star.STMatrix import STMatrix
 
 
 def load_meteorol(timeslots, datapath):
@@ -104,11 +105,8 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
         # _XCPT[:, 0:6, :, :] = _XC
         # _XCPT = np.zeros((_XC.shape[0], 2*(len_closeness+len_period+len_trend), 32, 32))
         print("_XC shape: ", _XC.shape, "_XP shape:", _XP.shape, "_XT shape:", _XT.shape)
-        _XCPT = _XC
-        if (len_period > 0):
-            _XCPT = np.concatenate((_XP, _XC),axis=1) # modificato per avere XPC
-        if (len_trend > 0):
-            _XCPT = np.concatenate((_XT, _XCPT),axis=1) # modificato per avere XTPC
+        _XCPT = np.concatenate((_XC, _XP),axis=1)
+        _XCPT = np.concatenate((_XCPT, _XT),axis=1)
         # _XCPT = np.concatenate((_XCPT, _XT),axis=1)
         # print(_XCPT.shape)
     # XC = np.vstack(XC)
@@ -118,7 +116,7 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
         Y.append(_Y)
 
         timestamps_Y += _timestamps_Y
-
+        
     Y = np.vstack(Y)
     XCPT = np.vstack(XCPT)
 
@@ -128,7 +126,7 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
     XCPT_train, Y_train = XCPT[:-len_val], Y[:-len_val]
     XCPT_val, Y_val = XCPT[-len_val:-len_test], Y[-len_val:-len_test]
     XCPT_test, Y_test = XCPT[-len_test:], Y[-len_test:]
-
+    
     timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = timestamps_Y[:-len_test], timestamps_Y[:-len_val], timestamps_Y[-len_val:-len_test], timestamps_Y[-len_test:]
 
     X_train_all, X_train, X_val, X_test = [], [], [], []
@@ -159,7 +157,7 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
             # load meteorol data
             meteorol_feature = load_meteorol(timestamps_Y, datapath)
             meta_feature.append(meteorol_feature)
-
+        
         meta_feature = np.hstack(meta_feature) if len(
             meta_feature) > 0 else np.asarray(meta_feature)
         metadata_dim = meta_feature.shape[1] if len(
@@ -167,7 +165,7 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
         metadata_dim = meta_feature.shape[1]
         meta_feature_train_all, meta_feature_train, meta_feature_val, meta_feature_test = meta_feature[
         :-len_test], meta_feature[:-len_val], meta_feature[-len_val:-len_test], meta_feature[-len_test:]
-        X_train_all.append(meta_feature_train_all)
+        X_train_all.append(meta_feature_train_all)  
         X_train.append(meta_feature_train)
         X_val.append(meta_feature_val)
         X_test.append(meta_feature_test)
@@ -175,7 +173,7 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
         metadata_dim = None
     for _X in X_train_all:
         print(_X.shape, )
-    print()
+    print()    
     for _X in X_train:
         print(_X.shape, )
     print()

@@ -2,12 +2,11 @@
 from __future__ import print_function
 import os
 import _pickle as pickle
-import h5py
 import numpy as np
+import h5py
 from . import *
 from .minmax_normalization import MinMaxNormalization
-from .STMatrix import STMatrix
-
+from .STMatrix3d import STMatrix
 
 def load_meteorol(timeslots, datapath):
     fname=os.path.join(datapath, 'Roma', 'Rome_Meteorology_2.h5')
@@ -66,6 +65,7 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
               meta_data=True, meteorol_data=False, holiday_data=True, datapath=None, shape=(32,32)):
     assert(len_closeness + len_period + len_trend > 0)
     # load data
+    # load data
     if (shape == (32, 32)):
         data, timestamps = load_stdata(os.path.join(datapath, 'Roma', 'Centro', 'Rome_32x32_30_minuti_centro.h5'))
     else:
@@ -118,7 +118,7 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
         Y.append(_Y)
 
         timestamps_Y += _timestamps_Y
-
+        
     Y = np.vstack(Y)
     XCPT = np.vstack(XCPT)
 
@@ -128,7 +128,7 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
     XCPT_train, Y_train = XCPT[:-len_val], Y[:-len_val]
     XCPT_val, Y_val = XCPT[-len_val:-len_test], Y[-len_val:-len_test]
     XCPT_test, Y_test = XCPT[-len_test:], Y[-len_test:]
-
+    
     timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = timestamps_Y[:-len_test], timestamps_Y[:-len_val], timestamps_Y[-len_val:-len_test], timestamps_Y[-len_test:]
 
     X_train_all, X_train, X_val, X_test = [], [], [], []
@@ -167,7 +167,7 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
         metadata_dim = meta_feature.shape[1]
         meta_feature_train_all, meta_feature_train, meta_feature_val, meta_feature_test = meta_feature[
         :-len_test], meta_feature[:-len_val], meta_feature[-len_val:-len_test], meta_feature[-len_test:]
-        X_train_all.append(meta_feature_train_all)
+        X_train_all.append(meta_feature_train_all)  
         X_train.append(meta_feature_train)
         X_val.append(meta_feature_val)
         X_test.append(meta_feature_test)
@@ -175,7 +175,7 @@ def load_data(T=24*2, nb_flow=2, len_closeness=None, len_period=None, len_trend=
         metadata_dim = None
     for _X in X_train_all:
         print(_X.shape, )
-    print()
+    print()    
     for _X in X_train:
         print(_X.shape, )
     print()
