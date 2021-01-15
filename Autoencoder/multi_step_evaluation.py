@@ -217,7 +217,7 @@ def bikenyc_evaluation():
         num_res=2
     )
 
-    model_fname = 'model3resunit_doppia_attention.BikeNYC6.c4.p0.t0.encoderblocks_2.kernel_size_3.lr_0.0001.batchsize_16.best.h5'
+    model_fname = 'model3resunit_doppia_attention.BikeNYC6.c4.p0.t0.encoderblocks_2.kernel_size_3.lr_0.0001.batchsize_16.best2.h5'
     model.load_weights(os.path.join('../best_models', 'model3', model_fname))
 
     # evaluate and save results
