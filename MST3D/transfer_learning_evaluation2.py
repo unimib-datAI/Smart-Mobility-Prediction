@@ -137,9 +137,9 @@ if CACHEDATA and os.path.isdir(path_cache) is False:
 
 # load data
 print("loading data...")
-preprocess_name = 'preprocessing_rome.pkl'
+preprocess_name = 'preprocessing_rome_2.pkl'
 ts = time.time()
-fname = os.path.join(path_cache, 'Rome_C{}_P{}_T{}.h5'.format(
+fname = os.path.join(path_cache, 'Rome_C{}_P{}_T{}_2.h5'.format(
     len_closeness, len_period, len_trend))
 if os.path.exists(fname) and CACHEDATA:
     X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = read_cache(
@@ -266,8 +266,8 @@ map_height, map_width = 16, 8  # grid size
 
 # load data
 print("loading data...")
-preprocess_name = 'preprocessing_rome16x8.pkl'
-fname = os.path.join(path_cache, 'Rome16x8_C{}_P{}_T{}.h5'.format(
+preprocess_name = 'preprocessing_rome16x8_2.pkl'
+fname = os.path.join(path_cache, 'Rome16x8_C{}_P{}_T{}_2.h5'.format(
     len_c, len_p, len_t))
 if os.path.exists(fname) and CACHEDATA:
     X_train, Y_train, \

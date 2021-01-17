@@ -83,8 +83,9 @@ def build_model(external_dim, save_model_pic=False, bn=False):
     model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
     # model.summary()
     if (save_model_pic):
-        from keras.utils.visualize_utils import plot
-        plot(model, to_file='TaxiBJ_model.png', show_shapes=True)
+        print('Test')
+        #from keras.utils.visualize_utils import plot
+        #plot(model, to_file='TaxiBJ_model.png', show_shapes=True)
     return model
 
 def read_cache(fname, preprocess_name):
@@ -123,9 +124,9 @@ def cache(fname, X_train, Y_train, X_test, Y_test, external_dim, timestamp_train
     h5.close()
 
 # load data
-preprocess_name='preprocessing_rome.pkl'
+preprocess_name='preprocessing_rome_2.pkl'
 print("loading data...")
-fname = os.path.join(path_cache, 'Rome_C{}_P{}_T{}.h5'.format(
+fname = os.path.join(path_cache, 'Rome_C{}_P{}_T{}_2.h5'.format(
     len_closeness, len_period, len_trend))
 if os.path.exists(fname) and CACHEDATA:
     X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = read_cache(
@@ -241,9 +242,9 @@ len_test = T * days_test
 map_height, map_width = 16, 8  # grid size
 
 # load data
-preprocess_name='preprocessing_rome16x8.pkl'
+preprocess_name='preprocessing_rome16x8_2.pkl'
 print("loading data...")
-fname = os.path.join(path_cache, 'Rome16x8_C{}_P{}_T{}.h5'.format(
+fname = os.path.join(path_cache, 'Rome16x8_C{}_P{}_T{}_2.h5'.format(
     len_closeness, len_period, len_trend))
 if os.path.exists(fname) and CACHEDATA:
     X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = read_cache(

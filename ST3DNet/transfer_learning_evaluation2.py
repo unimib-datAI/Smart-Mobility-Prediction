@@ -59,7 +59,7 @@ map_height, map_width = 32, 32  # grid size
 m_factor = 1
 
 # load data
-filename = os.path.join("../data", 'CACHE', 'ST3DNet', 'Rome_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
+filename = os.path.join("../data", 'CACHE', 'ST3DNet', 'Rome_c%d_p%d_t%d_noext_2'%(len_closeness, len_period, len_trend))
 f = open(filename, 'rb')
 X_train = pickle.load(f)
 Y_train = pickle.load(f)
@@ -185,7 +185,7 @@ map_height, map_width = 16, 8  # grid size
 m_factor = 1
 
 # load data
-filename = os.path.join("../data", 'CACHE', 'ST3DNet', 'Rome16x8_c%d_p%d_t%d_noext'%(len_closeness, len_period, len_trend))
+filename = os.path.join("../data", 'CACHE', 'ST3DNet', 'Rome16x8_c%d_p%d_t%d_noext_2'%(len_closeness, len_period, len_trend))
 f = open(filename, 'rb')
 X_train = pickle.load(f)
 Y_train = pickle.load(f)
