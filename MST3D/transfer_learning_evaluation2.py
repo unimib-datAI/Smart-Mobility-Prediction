@@ -12,7 +12,7 @@ from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 import deepst.metrics as metrics
-from deepst.datasets import carRome
+from deepst.datasets import carRome2
 from deepst.model import mst3d_bj_2, mst3d_nyc_2
 from deepst.evaluation import evaluate
 
@@ -146,7 +146,7 @@ if os.path.exists(fname) and CACHEDATA:
         fname, preprocess_name)
     print("load %s successfully" % fname)
 else:
-    X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = carRome.load_data(
+    X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = carRome2.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
         preprocess_name=preprocess_name, meta_data=True, meteorol_data=False, holiday_data=True, datapath=DATAPATH)
     if CACHEDATA:
@@ -278,7 +278,7 @@ if os.path.exists(fname) and CACHEDATA:
 else:
     X_train, Y_train, \
     X_test, Y_test, mmn, external_dim, \
-    timestamp_train, timestamp_test = carRome.load_data(
+    timestamp_train, timestamp_test = carRome2.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_c, len_period=len_p, len_trend=len_t, len_test=len_test,
         preprocess_name=preprocess_name, meta_data=True,
         meteorol_data=True, holiday_data=True, datapath=DATAPATH, shape=(16,8))

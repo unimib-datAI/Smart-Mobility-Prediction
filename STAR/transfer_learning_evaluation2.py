@@ -11,7 +11,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from star.model import *
 import star.metrics as metrics
-from star import carRome
+from star import carRome2
 from star.evaluation import evaluate
 
 
@@ -155,7 +155,7 @@ if os.path.exists(fname) and CACHEDATA:
 else:
     X_train_all, Y_train_all, X_train, Y_train, \
     X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = carRome.load_data(
+    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = carRome2.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
         len_val=len_val, preprocess_name=preprocess_name, meta_data=True, meteorol_data=False, holiday_data=True, datapath=DATAPATH)
     if CACHEDATA:
@@ -284,7 +284,7 @@ if os.path.exists(fname) and CACHEDATA:
 else:
     X_train_all, Y_train_all, X_train, Y_train, \
     X_val, Y_val, X_test, Y_test, mmn, external_dim, \
-    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = carRome.load_data(
+    timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = carRome2.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
         len_val=len_val, preprocess_name=preprocess_name, meta_data=True, meteorol_data=True, holiday_data=True, datapath=DATAPATH, shape=(16,8))
     if CACHEDATA:

@@ -5,7 +5,7 @@ from keras.callbacks import ModelCheckpoint
 import tensorflow as tf
 
 from utils import cache, read_cache
-from src.carRome import load_data
+from src.carRome2 import load_data
 from src.model3resunit_doppia_attention import build_model
 from src.evaluation import evaluate
 

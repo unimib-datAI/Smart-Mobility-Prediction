@@ -13,7 +13,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from deepst.models.STResNet import stresnet
 import deepst.metrics as metrics
-from deepst.datasets import carRome
+from deepst.datasets import carRome2
 from deepst.evaluation import evaluate
 
 def save_to_csv(score, csv_name):
@@ -133,7 +133,7 @@ if os.path.exists(fname) and CACHEDATA:
         fname, preprocess_name)
     print("load %s successfully" % fname)
 else:
-    X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = carRome.load_data(
+    X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = carRome2.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
         preprocess_name=preprocess_name, meta_data=True, meteorol_data=False, holiday_data=True, datapath=DATAPATH, shape=(32,32))
     if CACHEDATA:
@@ -251,7 +251,7 @@ if os.path.exists(fname) and CACHEDATA:
         fname, preprocess_name)
     print("load %s successfully" % fname)
 else:
-    X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = carRome.load_data(
+    X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = carRome2.load_data(
         T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period, len_trend=len_trend, len_test=len_test,
         preprocess_name=preprocess_name, meta_data=True, meteorol_data=True, holiday_data=True, datapath=DATAPATH, shape=(16,8))
     if CACHEDATA:
