@@ -754,10 +754,7 @@ def load_data_carRome2(T=24*2, nb_flow=2, len_closeness=None, len_period=None, l
 
     meta_feature = np.hstack(meta_feature) if len(
         meta_feature) > 0 else np.asarray(meta_feature)
-    metadata_dim = meta_feature.shape[1] if len(
-        meta_feature.shape) > 1 else None
-    if metadata_dim < 1:
-        metadata_dim = None
+    metadata_dim = meta_feature.shape[1] if len(meta_feature.shape) > 1 else None
     if meta_data and holiday_data and meteorol_data:
         print('time feature:', time_feature.shape, 'holiday feature:', holiday_feature.shape,
               'meteorol feature: ', meteorol_feature.shape, 'mete feature: ', meta_feature.shape)
@@ -943,7 +940,7 @@ def load_data_taxiNYC(T=24, nb_flow=2, len_closeness=None, len_period=None, len_
             # load meteorol data
             meteorol_feature = load_meteorol_taxiNYC(timestamps_Y, datapath)
             meta_feature.append(meteorol_feature)
-        
+
         meta_feature = np.hstack(meta_feature) if len(
             meta_feature) > 0 else np.asarray(meta_feature)
         metadata_dim = meta_feature.shape[1] if len(
@@ -1135,37 +1132,37 @@ def load_data_taxiNYC(T=24, nb_flow=2, len_closeness=None, len_period=None, len_
 ###
 
 ### load and cache Roma_Bergamo32x32 data
-#DATAPATH = '../data'
-#T = 24*2  # number of time intervals in one day
-#len_closeness = 6  # length of closeness dependent sequence
-#len_period = 0  # length of peroid dependent sequence
-#len_trend = 2  # length of trend dependent sequence
-#nb_residual_unit = 7   # number of residual units
-#nb_flow = 2  # there are two types of flows: new-flow and end-flow
-#days_test = 7
-#len_test = T * days_test
-#map_height, map_width = 32, 32  # grid size
-#
-#X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = \
-#        load_data_carRome2(T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period,
-#                  len_trend=len_trend, len_test=len_test, meta_data=False, meteorol_data=False, holiday_data=True, datapath=DATAPATH)
-#
-#CACHEDATA=True
-#path_cache = os.path.join(DATAPATH, 'CACHE', 'ST3DNet')
-#if CACHEDATA and os.path.isdir(path_cache) is False:
-#    os.mkdir(path_cache)
-#filename = os.path.join(path_cache, 'Rome_c%d_p%d_t%d_noext_2'%(len_closeness, len_period, len_trend))
-#
-#f = open(filename, 'wb')
-#pickle.dump(X_train, f)
-#pickle.dump(Y_train, f)
-#pickle.dump(X_test, f)
-#pickle.dump(Y_test, f)
-#pickle.dump(mmn, f)
-#pickle.dump(external_dim, f)
-#pickle.dump(timestamp_train, f)
-#pickle.dump(timestamp_test, f)
-#f.close()
+DATAPATH = '../data'
+T = 24*2  # number of time intervals in one day
+len_closeness = 6  # length of closeness dependent sequence
+len_period = 0  # length of peroid dependent sequence
+len_trend = 2  # length of trend dependent sequence
+nb_residual_unit = 7   # number of residual units
+nb_flow = 2  # there are two types of flows: new-flow and end-flow
+days_test = 7
+len_test = T * days_test
+map_height, map_width = 32, 32  # grid size
+
+X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = \
+        load_data_carRome2(T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period,
+                  len_trend=len_trend, len_test=len_test, meta_data=False, meteorol_data=False, holiday_data=True, datapath=DATAPATH)
+
+CACHEDATA=True
+path_cache = os.path.join(DATAPATH, 'CACHE', 'ST3DNet')
+if CACHEDATA and os.path.isdir(path_cache) is False:
+    os.mkdir(path_cache)
+filename = os.path.join(path_cache, 'Rome_c%d_p%d_t%d_noext_2'%(len_closeness, len_period, len_trend))
+
+f = open(filename, 'wb')
+pickle.dump(X_train, f)
+pickle.dump(Y_train, f)
+pickle.dump(X_test, f)
+pickle.dump(Y_test, f)
+pickle.dump(mmn, f)
+pickle.dump(external_dim, f)
+pickle.dump(timestamp_train, f)
+pickle.dump(timestamp_test, f)
+f.close()
 ###
 
 ### load and cache RomaNord16x8 data
