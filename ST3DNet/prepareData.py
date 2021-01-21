@@ -1179,7 +1179,7 @@ map_height, map_width = 16, 8  # grid size
 
 X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = \
         load_data_carRome2(T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period,
-                  len_trend=len_trend, len_test=len_test, meta_data=True, meteorol_data=True, holiday_data=Truee, datapath=DATAPATH, shape=(16,8))
+                  len_trend=len_trend, len_test=len_test, meta_data=True, meteorol_data=True, holiday_data=True, datapath=DATAPATH, shape=(16,8))
 
 CACHEDATA=True
 path_cache = os.path.join(DATAPATH, 'CACHE', 'ST3DNet')
