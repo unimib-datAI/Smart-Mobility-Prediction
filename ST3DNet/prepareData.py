@@ -1034,7 +1034,7 @@ def load_data_taxiNYC(T=24, nb_flow=2, len_closeness=None, len_period=None, len_
 # T = 24  # number of time intervals in one day
 # len_closeness = 6  # length of closeness dependent sequence
 # len_period = 0  # length of peroid dependent sequence
-# len_trend = 4  # length of trend dependent sequence
+# len_trend = 2  # length of trend dependent sequence
 # nb_residual_unit = 4   # number of residual units
 # nb_flow = 2  # there are two types of flows: new-flow and end-flow
 # days_test = 7*4
@@ -1043,7 +1043,7 @@ def load_data_taxiNYC(T=24, nb_flow=2, len_closeness=None, len_period=None, len_
 
 # X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = \
 #         load_data_taxiNYC(T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period,
-#                   len_trend=len_trend, len_test=len_test, meta_data=False, meteorol_data=False, holiday_data=False, datapath=DATAPATH)
+#                   len_trend=len_trend, len_test=len_test, meta_data=True, meteorol_data=True, holiday_data=True, datapath=DATAPATH)
 
 # CACHEDATA=True
 # path_cache = os.path.join(DATAPATH, 'CACHE', 'ST3DNet')
@@ -1111,7 +1111,7 @@ def load_data_taxiNYC(T=24, nb_flow=2, len_closeness=None, len_period=None, len_
 #
 #X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = \
 #        load_data_carRome(T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period,
-#                  len_trend=len_trend, len_test=len_test, meta_data=False, meteorol_data=False, holiday_data=False, datapath=DATAPATH, shape=(16,8))
+#                  len_trend=len_trend, len_test=len_test, meta_data=True, meteorol_data=True, holiday_data=True, datapath=DATAPATH, shape=(16,8))
 #
 #CACHEDATA=True
 #path_cache = os.path.join(DATAPATH, 'CACHE', 'ST3DNet')
@@ -1179,7 +1179,7 @@ map_height, map_width = 16, 8  # grid size
 
 X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test = \
         load_data_carRome2(T=T, nb_flow=nb_flow, len_closeness=len_closeness, len_period=len_period,
-                  len_trend=len_trend, len_test=len_test, meta_data=False, meteorol_data=False, holiday_data=False, datapath=DATAPATH, shape=(16,8))
+                  len_trend=len_trend, len_test=len_test, meta_data=True, meteorol_data=True, holiday_data=Truee, datapath=DATAPATH, shape=(16,8))
 
 CACHEDATA=True
 path_cache = os.path.join(DATAPATH, 'CACHE', 'ST3DNet')
