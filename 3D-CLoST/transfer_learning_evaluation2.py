@@ -51,7 +51,7 @@ if os.path.isdir(path_model) is False:
 ### 32x32
 # parameters
 DATAPATH = '../data'
-nb_epoch = 150  # number of epoch at training stage
+nb_epoch = 100  # number of epoch at training stage
 nb_epoch_cont = 150  # number of epoch at training (cont) stage
 batch_size = 64  # batch size
 T = 24*2  # number of time intervals in one day
