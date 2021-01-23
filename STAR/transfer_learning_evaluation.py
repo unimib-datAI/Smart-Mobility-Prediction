@@ -34,6 +34,16 @@ def save_to_csv(score, csv_name):
         file.write("\n")
         file.close()
 
+# tf.config.experimental.set_virtual_device_configuration(gpus[0], [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6144)])
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:  # Currently, memory growth needs to be the same across GPUs
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        print(e)  # Memory growth must be set before GPUs have been initialized
+
+
 def build_model(external_dim, save_model_pic=False, bn=False):
     c_conf = (len_closeness, nb_flow, map_height,
               map_width) if len_closeness > 0 else None
