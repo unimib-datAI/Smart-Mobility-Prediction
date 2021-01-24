@@ -7,6 +7,7 @@ from utils import cache, read_cache
 from src.carRome import load_data
 from src.model3resunit_doppia_attention import build_model
 from src.evaluation import evaluate
+import tensorflow as tf
 
 
 def save_to_csv(score, csv_name):
