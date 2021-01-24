@@ -52,8 +52,8 @@ if os.path.isdir(path_model) is False:
     os.mkdir(path_model)
 
 path_confronto = 'Confronto'
-if os.path.isdir(path_model) is False:
-    os.mkdir(path_model)
+if os.path.isdir(path_confronto) is False:
+    os.mkdir(path_confronto)
 
 def build_model_bj(save_model_pic=False):
     model = mst3d_bj_2(len_closeness, len_period, len_trend, nb_flow, map_height, map_width, external_dim)

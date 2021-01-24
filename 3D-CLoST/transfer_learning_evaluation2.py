@@ -50,8 +50,8 @@ if os.path.isdir(path_model) is False:
     os.mkdir(path_model)
 
 path_confronto = 'Confronto'
-if os.path.isdir(path_model) is False:
-    os.mkdir(path_model)
+if os.path.isdir(path_confronto) is False:
+    os.mkdir(path_confronto)
 ### 32x32
 # parameters
 DATAPATH = '../data'

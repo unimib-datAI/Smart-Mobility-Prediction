@@ -47,8 +47,9 @@ path_model = 'MODEL_ROMA_BERGAMO'
 if os.path.isdir(path_model) is False:
     os.mkdir(path_model)
 path_confronto = 'Confronto'
-if os.path.isdir(path_model) is False:
-    os.mkdir(path_model)
+if os.path.isdir(path_confronto) is False:
+    os.mkdir(path_confronto)
+
 def build_model(external_dim, save_model_pic=False, bn=False):
     c_conf = (len_closeness, nb_flow, map_height,
               map_width) if len_closeness > 0 else None
