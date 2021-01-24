@@ -49,6 +49,9 @@ if gpus:
 path_model = 'MODEL_ROMA_BERGAMO'
 if os.path.isdir(path_model) is False:
     os.mkdir(path_model)
+path_confronto = 'Confronto'
+if os.path.isdir(path_model) is False:
+    os.mkdir(path_model)
 ### 32x32
 # parameters
 DATAPATH = '../data'
@@ -187,7 +190,7 @@ save_to_csv(score, csv_name)
 
 # save real vs predicted
 fname = 'stresnet_RomaNord32x32.h5'
-h5 = h5py.File(fname, 'w')
+h5 = h5py.File(os.path.join(path_confronto,fname), 'w')
 h5.create_dataset('Y_real', data=Y_test)
 h5.create_dataset('Y_pred', data=Y_pred)
 h5.create_dataset('timestamps', data=timestamp_test)
@@ -221,7 +224,7 @@ save_to_csv(score, csv_name)
 
 # save real vs predicted
 fname = 'stresnet_RomaNord32x32_trained.h5'
-h5 = h5py.File(fname, 'w')
+h5 = h5py.File(os.path.join(path_confronto,fname), 'w')
 h5.create_dataset('Y_real', data=Y_test)
 h5.create_dataset('Y_pred', data=Y_pred)
 h5.create_dataset('timestamps', data=timestamp_test)
@@ -305,7 +308,7 @@ save_to_csv(score, csv_name)
 
 # save real vs predicted
 fname = 'stresnet_RomaNord16x8.h5'
-h5 = h5py.File(fname, 'w')
+h5 = h5py.File(os.path.join(path_confronto,fname), 'w')
 h5.create_dataset('Y_real', data=Y_test)
 h5.create_dataset('Y_pred', data=Y_pred)
 h5.create_dataset('timestamps', data=timestamp_test)
@@ -339,7 +342,7 @@ save_to_csv(score, csv_name)
 
 # save real vs predicted
 fname = 'stresnet_RomaNord16x8_trained.h5'
-h5 = h5py.File(fname, 'w')
+h5 = h5py.File(os.path.join(path_confronto,fname), 'w')
 h5.create_dataset('Y_real', data=Y_test)
 h5.create_dataset('Y_pred', data=Y_pred)
 h5.create_dataset('timestamps', data=timestamp_test)

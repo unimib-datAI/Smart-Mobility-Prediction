@@ -19,9 +19,9 @@ python transfer_learning_evaluation.py
 # python main_taxiBJ.py
 
 # # ST3DNet
-#cd ../ST3DNet
+cd ../ST3DNet
 #python prepareData.py
-#python transfer_learning_evaluation.py
+python transfer_learning_evaluation.py
 # python main_taxiBJ.py
 
 # # 3D-CLoST

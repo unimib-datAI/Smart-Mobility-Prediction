@@ -20,7 +20,7 @@ python transfer_learning_evaluation2.py
 
 # # ST3DNet
 cd ../ST3DNet
-python prepareData.py
+#python prepareData.py
 python transfer_learning_evaluation2.py
 # python main_taxiBJ.py
 
