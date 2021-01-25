@@ -155,7 +155,7 @@ print('=' * 10)
 model = build_model_bj(save_model_pic=False)
 
 ## single-step-prediction no TL
-nb_epoch = 100
+nb_epoch = 200
 batch_size = 16
 hyperparams_name = 'mst3d_roma32x32'
 fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
@@ -203,7 +203,7 @@ h5.create_dataset('max', data=mmn._max)
 h5.close()
 
 ## TL with re-training
-nb_epoch = 100
+nb_epoch = 200
 batch_size = 16
 hyperparams_name = 'TaxiBJ_Rome'
 fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
@@ -291,7 +291,7 @@ model = build_model_ny(
 )
 
 ## single-step-prediction no TL
-nb_epoch = 100
+nb_epoch = 200
 batch_size = 16
 hyperparams_name = 'mst3d_roma16x8'
 fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
@@ -339,7 +339,7 @@ h5.create_dataset('max', data=mmn._max)
 h5.close()
 
 ## TL with re-training
-nb_epoch = 100
+nb_epoch = 200
 batch_size = 16
 hyperparams_name = 'TaxiNY_Rome'
 fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
