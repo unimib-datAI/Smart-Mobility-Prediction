@@ -43,10 +43,13 @@ map_height, map_width = 32, 32  # grid size
 # load data
 cache_folder = 'Autoencoder/model3'
 path_cache = os.path.join(DATAPATH, 'CACHE', cache_folder)  # cache path
+path_model = 'MODEL'
 if CACHEDATA and os.path.isdir(path_cache) is False:
     os.mkdir(path_cache)
 if os.path.isdir('results') is False:
     os.mkdir('results')
+if os.path.isdir(path_model) is False:
+    os.mkdir(path_model)
 
 
 # load data
