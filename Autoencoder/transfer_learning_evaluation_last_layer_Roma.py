@@ -73,9 +73,7 @@ else:
 print(external_dim)
 print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
 
-def save_map(model, i, freeze= True):
-    # predict
-    Y_pred = model.predict(X_test)  # compute predictions
+def save_map(Y_pred, i, freeze= True):
     # save real vs predicted
     if freeze:
         fname = f'Roma_{map_height}x{map_width}_trained_attention_iteration{i}.h5'
@@ -157,7 +155,7 @@ def train_model(batch_size, encoder_block, filters, save_results=False, i='', fr
         score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1)  # evaluate performance
 
         # save h5 file to generate map
-        save_map(model, i, freeze)
+        save_map(Y_pred, i, freeze)
 
         # save to csv
         if freeze:
