@@ -211,7 +211,7 @@ if CACHEDATA and os.path.isdir(path_cache) is False:
 # load data
 print("loading data...")
 preprocess_name = 'preprocess_rome16x8.pkl'
-fname = os.path.join(path_cache, 'Rome16x8_C{}_P{}_T{}.h5'.format(
+fname = os.path.join(path_cache, 'Rome16x8_C{}_P{}_T{}_2.h5'.format(
     len_closeness, len_period, len_trend))
 if os.path.exists(fname) and CACHEDATA:
     X_train_all, Y_train_all, X_train, Y_train, \
