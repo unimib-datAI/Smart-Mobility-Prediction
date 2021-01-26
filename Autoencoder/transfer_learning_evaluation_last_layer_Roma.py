@@ -179,7 +179,6 @@ def train_model(batch_size, encoder_block, filters, save_results=False, i='', fr
         # save to csv
         if freeze:
             if not spatial:
-                print('NON È SPAZIALE')
                 csv_name = os.path.join('results', f'Roma_{map_height}x{map_width}_trained_attention_results.csv')
             else:
                 csv_name = os.path.join('results', f'Roma_{map_height}x{map_width}_trained_only_spatial_results.csv')
