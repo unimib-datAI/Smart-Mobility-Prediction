@@ -34,7 +34,7 @@ days_test = 7
 len_test = T * days_test
 len_val = len_test # no validation
 
-nb_epoch = 150
+nb_epoch = 50
 batch_size = 16
 
 map_height, map_width = 32, 32  # grid size
@@ -76,20 +76,26 @@ else:
 print(external_dim)
 print("\n days (test): ", [v[:8] for v in timestamp_test[0::T]])
 
-def save_map(Y_pred, i, freeze= True):
+def save_map(Y_pred, i, freeze= True, spatial = False):
+    path_save = f'confronto_{map_height}x{map_width}'
+    if os.path.isdir(path_save) is False:
+        os.mkdir(path_save)
     # save real vs predicted
     if freeze:
-        fname = f'Roma_{map_height}x{map_width}_trained_attention_iteration{i}.h5'
+        if not spatial:
+            fname = f'Roma_{map_height}x{map_width}_trained_attention_iteration{i}.h5'
+        else:
+            fname = f'Roma_{map_height}x{map_width}_trained_only_spatial_iteration{i}.h5'
     else:
         fname = f'Roma_{map_height}x{map_width}_trained_random_weight_iteration{i}.h5'
-    h5 = h5py.File(fname, 'w')
+    h5 = h5py.File(os.path.join(path_save,fname), 'w')
     h5.create_dataset('Y_real', data=Y_test)
     h5.create_dataset('Y_pred', data=Y_pred)
     h5.create_dataset('timestamps', data=timestamp_test)
     h5.create_dataset('max', data=mmn._max)
     h5.close()
 
-def train_model(batch_size, encoder_block, filters, save_results=False, i='', freeze = True):
+def train_model(batch_size, encoder_block, filters, save_results=False, i='', freeze = True, spatial = False):
     # build model
     model = build_model(
         len_closeness, len_period, len_trend, nb_flow, map_height, map_width,
@@ -104,11 +110,16 @@ def train_model(batch_size, encoder_block, filters, save_results=False, i='', fr
             #load weight
             model_fname = 'model3resunit_doppia_attention.TaxiBJ1.c4.p0.t0.encoderblocks_3.kernel_size_3.lr_0.0007.batchsize_16.noMeteo.best.h5'
             model.load_weights(os.path.join('../best_models', 'model3', model_fname))
-
-            #freeze all layers except attention
-            for layer in model.layers[:-28]:
-                layer.trainable = False
-            hyperparams_name = 'Roma_32x32_iterazione{}_trained_attention_accuracy'.format(i)
+            if not spatial:
+                #freeze all layers except attention
+                for layer in model.layers[:-28]:
+                    layer.trainable = False
+                hyperparams_name = 'Roma_32x32_iterazione{}_trained_attention_accuracy'.format(i)
+            else:
+                #freeze all layers except attention
+                for layer in model.layers[:-13]:
+                    layer.trainable = False
+                hyperparams_name = 'Roma_32x32_iterazione{}_trained_only_spatial_accuracy'.format(i)
         else:
             hyperparams_name = 'Roma_32x32_iterazione{}_trained_random_weight_accuracy'.format(i)
     else:
@@ -116,11 +127,16 @@ def train_model(batch_size, encoder_block, filters, save_results=False, i='', fr
             # load weight
             model_fname = 'model3resunit_doppia_attention.TaxiNYC5.c4.p0.t0.encoderblocks_2.kernel_size_3.lr_0.00086.batchsize_48.best.h5'
             model.load_weights(os.path.join('../best_models', 'model3', model_fname))
-
-            # freeze all layers except attention
-            for layer in model.layers[:-28]:
-                layer.trainable = False
-            hyperparams_name = 'Roma_16x8_iterazione{}_trained_attention_accuracy'.format(i)
+            if not spatial:
+                # freeze all layers except attention
+                for layer in model.layers[:-28]:
+                    layer.trainable = False
+                hyperparams_name = 'Roma_16x8_iterazione{}_trained_attention_accuracy'.format(i)
+            else:
+                # freeze all layers except attention
+                for layer in model.layers[:-13]:
+                    layer.trainable = False
+                hyperparams_name = 'Roma_16x8_iterazione{}_trained_only_attention_accuracy'.format(i)
         else:
             hyperparams_name = 'Roma_16x8_iterazione{}_trained_random_weight_accuracy'.format(i)
 
@@ -162,7 +178,11 @@ def train_model(batch_size, encoder_block, filters, save_results=False, i='', fr
 
         # save to csv
         if freeze:
-            csv_name = os.path.join('results', f'Roma_{map_height}x{map_width}_trained_attention_results.csv')
+            if not spatial:
+                print('NON È SPAZIALE')
+                csv_name = os.path.join('results', f'Roma_{map_height}x{map_width}_trained_attention_results.csv')
+            else:
+                csv_name = os.path.join('results', f'Roma_{map_height}x{map_width}_trained_only_spatial_results.csv')
         else:
             csv_name = os.path.join('results', f'Roma_{map_height}x{map_width}_trained_random_weight_results.csv')
         if not os.path.isfile(csv_name):
@@ -186,14 +206,22 @@ def train_model(batch_size, encoder_block, filters, save_results=False, i='', fr
             file.close()
         K.clear_session()
 
-
+# 10 iterations for training the two attention
 for i in range(0, 10):
     train_model(batch_size=batch_size,
                 encoder_block= 3,
                 filters= [64, 64, 64, 64, 16],
                 save_results=True,
                 i=i)
-
+# 10 iterations for training only spatial attention
+for i in range(0, 10):
+    train_model(batch_size=batch_size,
+                encoder_block= 3,
+                filters= [64, 64, 64, 64, 16],
+                save_results=True,
+                i=i,
+                spatial=True)
+# 10 iterations for training all the model with random weights
 for i in range(0, 10):
     train_model(batch_size=batch_size,
                 encoder_block=3,
@@ -201,6 +229,7 @@ for i in range(0, 10):
                 save_results=True,
                 i=i,
                 freeze=False)
+
 
 
 
@@ -252,7 +281,15 @@ for i in range(0, 10):
                 filters= [64, 64, 64, 16],
                 save_results=True,
                 i=i)
-
+# 10 iterations for training only spatial attention
+for i in range(0, 10):
+    train_model(batch_size=batch_size,
+                encoder_block= 2,
+                filters= [64, 64, 64, 16],
+                save_results=True,
+                i=i,
+                spatial=True)
+# 10 iterations for training all the model with random weights
 for i in range(0, 10):
     train_model(batch_size=batch_size,
                 encoder_block=2,
