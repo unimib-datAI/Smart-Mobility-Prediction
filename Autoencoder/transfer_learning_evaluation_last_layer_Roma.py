@@ -174,7 +174,7 @@ def train_model(batch_size, encoder_block, filters, save_results=False, i='', fr
         score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1)  # evaluate performance
 
         # save h5 file to generate map
-        save_map(Y_pred, i, freeze)
+        save_map(Y_pred, i, freeze, spatial)
 
         # save to csv
         if freeze:
