@@ -56,7 +56,6 @@ if os.path.isdir(path_confronto) is False:
 # parameters
 DATAPATH = '../data'
 nb_epoch = 100  # number of epoch at training stage
-nb_epoch_cont = 150  # number of epoch at training (cont) stage
 batch_size = 64  # batch size
 T = 24*2  # number of time intervals in one day
 CACHEDATA = True  # cache data or NOT
@@ -251,7 +250,7 @@ Y_pred = model.predict(X_test)  # compute predictions
 score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
 
 # save to csv
-csv_name = os.path.join('results_roma_bergamo', f'roma16x8_results_2.csv')
+csv_name = os.path.join('results_roma_bergamo', f'roma16x8_results.csv')
 save_to_csv(score, csv_name)
 
 
@@ -301,7 +300,7 @@ Y_pred = model.predict(X_test)  # compute predictions
 score = evaluate(Y_test, Y_pred, mmn)  # evaluate performance
 
 # save to csv
-csv_name = os.path.join('results_roma_bergamo', f'TL_taxiNY_roma16x8_training_results_2.csv')
+csv_name = os.path.join('results_roma_bergamo', f'TL_taxiNY_roma16x8_training_results.csv')
 save_to_csv(score, csv_name)
 
 # save real vs predicted

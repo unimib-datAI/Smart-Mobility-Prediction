@@ -55,7 +55,7 @@ tf.random.set_seed(1234)
 model_name = 'model3resunit_doppia_attention'
 
 DATAPATH = '../data'
-nb_epoch = 1  # number of epoch at training stage
+nb_epoch = 150  # number of epoch at training stage
 T = 24  # number of time intervals in one day
 CACHEDATA = True  # cache data or NOT
 
