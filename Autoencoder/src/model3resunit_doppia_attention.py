@@ -254,6 +254,27 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
         x = Add()([x, external_output])
 
     # build decoder blocks
+    # Adding Noise
+    # 1) x = tf.keras.layers.GaussianNoise(1) (x)
+    # 2) class noiseLayer(tf.keras.layers.Layer):
+    #
+    #     def __init__(self,mean,std):
+    #         super(noiseLayer, self).__init__()
+    #         self.mean = mean
+    #         self.std  = std
+    #
+    #     def call(self, input):
+    #
+    #         mean = self.mean
+    #         std  = self.std
+    #
+    #         return input + tf.random.normal(tf.shape(input).numpy(),
+    #                                     mean = mean,
+    #                                     stddev = std)
+
+    # x = noiseLayer(mean = 0, std = 1)(x)
+
+
     # first conv decoder
     x = my_conv(filters[-2], 'relu', kernel_size)(x)
     # decoder
