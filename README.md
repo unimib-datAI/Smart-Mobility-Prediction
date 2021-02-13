@@ -1,5 +1,5 @@
 # Smart Mobility Prediction
-This repository has been created for a university thesis at Università Bicocca in Milan. It contains the implementation and testing code for different deep networks for the traffic flow prediction problem.
+This repository has been created for a university thesis at Università Bicocca in Milan. It contains the implementation and testing code of different deep networks for the traffic flow prediction problem.
 
 ## Repository structure
 Each of the main folders is dedicated to a specific deep learning network. Some of them were taken and modified from other repositories associated with the source paper, while others are our original implementations. Here it is an exhaustive list:
@@ -10,7 +10,7 @@ Each of the main folders is dedicated to a specific deep learning network. Some 
 * **STAR.** Folder for [[5]](#5). Soure code was taken from [here](https://github.com/hongnianwang/STAR).
 * **3D-CLoST.** Folder dedicated to a model created during another research at Università Bicocca.
 * **STDN.** Folder referring to [[6]](#6). This folder is actually a copy of [this](https://github.com/tangxianfeng/STDN) repository, since it was never used in our experimentes.
-* **Autoencoder.** Main folder of this repository, containing the implementation of new models for traffic flow prediciton based on encoder-decoder architecture.
+* **Autoencoder.** Main folder of this repository, containing the implementation of new models for traffic flow prediction based on encoder-decoder architecture.
 
 The contents of these folders can be a little different from each other, accordingly to the structure of the source repositories. Nevertheless, in each of them there are all the codes used to create input flow volumes, training and testing the models for single step prediction, and to evaluate performance on multi step prediction and transfer learning experiments.
 
@@ -18,6 +18,21 @@ The remaining folders are:
 * **baselines**. Contains the code implementing Historical Average and ARIMA approaches to the traffic flow prediction problem.
 * **data**. Folder where source data should be put in.
 * **helpers**. Contains some helpers code used for data visualization or to get weather info through an external API.
+
+## STREEDNet
+STREEDNet (Spatio Temporal REsidual Encoder-Decoder Network) is the new framework developed in this research. Its implementation is in [streednet.py](./Autoencoder/src/streednet.py). Its architecture is shown in the next figure. The main sections are Encoder, Cascade CMUs and Decoder. The encoder models the spatial dependencies of the four input frames, independently. Cascade CMUs are used like in [[3]](#3) to model temporal dependencies. The decoder finally computes the predicted image of traffic flows.
+
+![architecture](./images/streednet_architecture.png)
+
+### Encoder
+The encoder contains a start convolution layer, *L* encoder blocks and a final convolution layer. An encoder block has a residual unit and a down-sampling layer. This structure is represented in the next picture.
+
+![encoder](./images/encoder.png)
+
+### Decoder
+The decoder is almost symmetrical with respect to the encoder. It contains a start and an end convolution layer and *L* decoder blocks. In each decoder block there are an up-sampling layer and a residual unit, with a skip connection which allows informations to flow directly from the encoder. Furthermore, we inserted channel and spatial attention before the last convolution. Their implementation is similar to the ones described in [[7]](#7) and [[8]](#8).
+
+![decoder](./images/decoder.png)
 
 ## References
 <a id="1">[1]</a> 
@@ -37,3 +52,9 @@ Wang, Hongnian, and Han Su. "STAR: A concise deep learning framework for citywid
 
 <a id="6">[6]</a>
 Yao, Huaxiu, et al. "Revisiting spatial-temporal similarity: A deep learning framework for traffic prediction." Proceedings of the AAAI conference on artificial intelligence. Vol. 33. No. 01. 2019.
+
+<a id="7">[7]</a>
+Liu, Yang, et al. "Attention-based deep ensemble net for large-scale online taxi-hailing demand prediction." IEEE Transactions on Intelligent Transportation Systems 21.11 (2019): 4798-4807.
+
+<a id="8">[8]</a>
+Woo, Sanghyun, et al. "Cbam: Convolutional block attention module." Proceedings of the European conference on computer vision (ECCV). 2018.
