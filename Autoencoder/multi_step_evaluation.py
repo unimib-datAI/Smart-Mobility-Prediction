@@ -10,7 +10,7 @@ from keras import backend as K
 from utils import cache, read_cache
 from src import TaxiBJ3d, TaxiNYC3d, BikeNYC3d
 from src.evaluation import evaluate
-from src.model3resunit_doppia_attention import build_model
+from src.streednet import build_model
 from src.multi_step import multi_step_2D
 
 

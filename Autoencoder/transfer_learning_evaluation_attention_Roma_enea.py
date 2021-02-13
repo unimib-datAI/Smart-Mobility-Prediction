@@ -6,7 +6,7 @@ import h5py
 from keras.callbacks import ModelCheckpoint
 import tensorflow as tf
 from src.carRome import load_data
-from src.model3resunit_doppia_attention import build_model
+from src.streednet import build_model
 from utils import cache, read_cache
 from src.evaluation import evaluate
 

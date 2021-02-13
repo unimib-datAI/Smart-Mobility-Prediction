@@ -1,13 +1,11 @@
 '''
-Channel_attention:
-- utilizzo sia average sia del max_poling pesati opportunamente
-- la struttura segue il paper 'Attention-Based Deep Ensemble Net for Large-Scale Online Taxi-Hailing Demand Prediction'
+Notes:
+- Channel_attention:
+  refer to 'Attention-Based Deep Ensemble Net for Large-Scale Online Taxi-Hailing Demand Prediction'
 
-Channel_attention:
-- utilizzo sia average sia del max_poling pesati opportunamente
-- la struttura segue il paper 'CBAM: Convolutional Block Attention Module'
+- Channel_attention:
+  refer to'CBAM: Convolutional Block Attention Module'
 '''
-
 
 import tensorflow as tf
 from keras.models import Model
@@ -30,6 +28,7 @@ import numpy as np
 
 import src.metrics as metrics
 
+
 def global_avg_pooling(x): # keep channel
     gap = tf.reduce_mean(x, axis=[1, 2])
     return gap
@@ -37,7 +36,6 @@ def global_avg_pooling(x): # keep channel
 def global_avg_pooling_spatial(x): # keep height e width
     gap = tf.reduce_mean(x, axis=[3])
     return gap
-
 
 def global_max_pooling_spatial(x): # keep height e width
     gsp = tf.reduce_max(x, axis=[3])
@@ -71,7 +69,6 @@ def spatial_attention(x):
     return x * h4
 
 
-
 def channel_attention(x, ch):
     batch_size, height, width, num_channels = tf.shape(x)[0], x.shape[1], x.shape[2], x.shape[3]
     h1 = global_avg_pooling(x)
@@ -82,12 +79,13 @@ def channel_attention(x, ch):
     delta1 = tf.Variable(tf.ones(h2.shape[1:], dtype=tf.dtypes.float32), trainable=True, name="delta", shape=tf.TensorShape(h2.shape[1:]))
     h3 = dense(h1, ch // 8)
     h4 = dense(h2, ch // 8)
-    h5 = dense(h3, ch) # Manca magari il sigmoide
+    h5 = dense(h3, ch) # sigmoid activation could be added here
     h6 = dense(h4, ch)
     h7 = gamma1*h5 + delta1 * h6
     h7 = tf.reshape(h7, shape=[batch_size, 1, 1, num_channels])
     h8 = tf.keras.activations.sigmoid(h7)
     return x * h8
+
 
 class MultiplicativeUnit():
     """Initialize the multiplicative unit.
@@ -166,6 +164,7 @@ def predcnn_perframe(xs, num_hidden, filter_size, input_length, reuse):
             xs = temp
         return xs[0]
 
+
 def my_conv(filters, activation, kernel_size=3, time_distributed=False):
     def f(input_layer):
         if (time_distributed):
@@ -200,7 +199,7 @@ def _residual_unit(filters, num_res, kernel_size, td):
         return Add()([input_layer, residual])
     return f
 
-def TSresUnits2D(filters, num_res, kernel_size, time_distributed, repetations=1):
+def TDresUnits2D(filters, num_res, kernel_size, time_distributed, repetations=1):
     def f(input_layer):
         for i in range(repetations):
             input_layer = _residual_unit(filters, num_res, kernel_size, time_distributed)(input_layer)
@@ -214,7 +213,7 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
 
     main_inputs = []
     #ENCODER
-    # input layer tx32x32x2
+    # input layer txhxwx2
     t = len_c+len_p+len_t   #len_p*2+len_t*2
     input = Input(shape=((t, map_height, map_width, nb_flow)))
     main_inputs.append(input)
@@ -227,7 +226,7 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
     skip_connection_layers = []
     for i in range(1, encoder_blocks+1): # es: encoder_blocks=2 -> i from 1 to 2
         # res unit
-        x = TSresUnits2D(filters[i], num_res, kernel_size, time_distributed=True)(x)
+        x = TDresUnits2D(filters[i], num_res, kernel_size, time_distributed=True)(x)
         # append layer to skip connection list
         skip_connection_layers.append(x)
         # downsampling
@@ -282,10 +281,9 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
         # conv_transpose + skip_conn + relu + bn
         x = my_conv_transpose(x, skip_connection_layers[i-1])
         # conv + relu + bn
-        x = TSresUnits2D(filters[i], num_res, kernel_size, time_distributed=False)(x)
-    #final conv
+        x = TDresUnits2D(filters[i], num_res, kernel_size, time_distributed=False)(x)
 
-     # last convolution + tanh + bn 32x32x2
+    # last convolution + tanh + bn (hxwx2)
     x = channel_attention(x, filters[0])
     x = spatial_attention(x)
     output = my_conv(nb_flow, 'tanh')(x)
@@ -293,8 +291,9 @@ def my_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
 
     return Model(main_inputs, output)
 
+
 def build_model(len_c, len_p, len_t, nb_flow=2, map_height=32, map_width=32,
-                external_dim=8, encoder_blocks=2, filters=[32,64,64,16],
+                external_dim=8, encoder_blocks=2, filters=[64,64,64,16],
                 kernel_size=3, num_res=2, lr=0.0001, save_model_pic=None):
     model = my_model(len_c, len_p, len_t, nb_flow, map_height, map_width,
                      external_dim, encoder_blocks, filters, kernel_size, num_res)

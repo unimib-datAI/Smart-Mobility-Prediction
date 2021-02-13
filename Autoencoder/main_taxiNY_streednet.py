@@ -12,7 +12,7 @@ import tensorflow as tf
 from keras import backend as K
 
 from utils import cache, read_cache
-from src import TaxiBJ, TaxiBJ3d
+from src import TaxiNYC3d
 from src.evaluation import evaluate
 from src import (
     model as m1,
@@ -20,7 +20,7 @@ from src import (
     model3 as m3,
     model3attention as m3attention,
     #model3resunit as m3resunit,
-    model3resunit_doppia_attention as m3resunitattention,
+    streednet as m3resunitattention,
     model4 as m4,
     model5 as m5,
     model6 as m6
@@ -56,7 +56,7 @@ model_name = 'model3resunit_doppia_attention'
 
 DATAPATH = '../data'
 nb_epoch = 150  # number of epoch at training stage
-T = 48  # number of time intervals in one day
+T = 24  # number of time intervals in one day
 CACHEDATA = True  # cache data or NOT
 
 len_closeness = 4  # length of closeness dependent sequence
@@ -68,7 +68,7 @@ days_test = 4*7 # 4 weeks
 len_test = T * days_test
 len_val = 2 * len_test
 
-map_height, map_width = 32, 32  # grid size
+map_height, map_width = 16, 8  # grid size
 
 cache_folder = 'Autoencoder/model3' if model_name in ['model3', 'model3attention', 'model3resunit', 'model3resunit_attention', 'model3resunit_doppia_attention'] else 'Autoencoder'
 path_cache = os.path.join(DATAPATH, 'CACHE', cache_folder)  # cache path
@@ -85,7 +85,7 @@ if os.path.isdir('results') is False:
 
 # load data
 print("loading data...")
-fname = os.path.join(path_cache, 'TaxiBJ_C{}_P{}_T{}.h5'.format(
+fname = os.path.join(path_cache, 'TaxiNYC_C{}_P{}_T{}.h5'.format(
     len_closeness, len_period, len_trend))
 if os.path.exists(fname) and CACHEDATA:
     X_train_all, Y_train_all, X_train, Y_train, \
@@ -94,10 +94,10 @@ if os.path.exists(fname) and CACHEDATA:
         fname, 'preprocessing_bj.pkl')
     print("load %s successfully" % fname)
 else:
-    if (model_name.startswith('model3')):
-        load_data = TaxiBJ3d.load_data
-    else:
-        load_data = TaxiBJ.load_data
+    #if (model_name.startswith('model3')):
+    load_data = TaxiNYC3d.load_data
+    #else:
+    #    load_data = TaxiBJ.load_data
     X_train_all, Y_train_all, X_train, Y_train, \
     X_val, Y_val, X_test, Y_test, mmn, external_dim, \
     timestamp_train_all, timestamp_train, timestamp_val, timestamp_test = load_data(
@@ -132,7 +132,7 @@ def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False,
         # save_model_pic=f'TaxiBJ_{model_name}'
     )
     # model.summary()
-    hyperparams_name = '{}.TaxiBJ{}.c{}.p{}.t{}.encoderblocks_{}.kernel_size_{}.lr_{}.batchsize_{}'.format(
+    hyperparams_name = '{}.TaxiNYC{}.c{}.p{}.t{}.encoderblocks_{}.kernel_size_{}.lr_{}.batchsize_{}'.format(
         model_name, i, len_closeness, len_period, len_trend, encoder_blocks,
         kernel_size, lr, batch_size)
     fname_param = os.path.join('MODEL', '{}.best.h5'.format(hyperparams_name))
@@ -179,7 +179,7 @@ def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False,
         score = evaluate(Y_test, Y_pred, mmn, rmse_factor=1)  # evaluate performance
 
         # save to csv
-        csv_name = os.path.join('results', f'{model_name}_TaxiBJ_results.csv')
+        csv_name = os.path.join('results', f'{model_name}_TaxiNYC_results.csv')
         if not os.path.isfile(csv_name):
             if os.path.isdir('results') is False:
                 os.mkdir('results')
@@ -207,14 +207,14 @@ def train_model(encoder_blocks, lr, batch_size, kernel_size, save_results=False,
 
 # bayesian optimization
 optimizer = BayesianOptimization(f=train_model,
-                              pbounds={'encoder_blocks': (3, 3),
+                              pbounds={'encoder_blocks': (2, 2),
                                        'lr': (0.001, 0.0001),
-                                       'batch_size': (1, 2.999), # *16
+                                       'batch_size': (1, 3.999), # *16
                                        'kernel_size': (3, 4.999)
                               },
                               verbose=2)
 
-bs_fname = 'bs_taxiBJ.json'
+bs_fname = 'bs_taxiNYC.json'
 logger = JSONLogger(path="./results/" + bs_fname)
 optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
 
@@ -222,9 +222,8 @@ optimizer.maximize(init_points=2, n_iter=10)
 
 
 # New optimizer is loaded with previously seen points
-# load_logs(optimizer, logs=["./results/" + bs_fname])
-# optimizer.subscribe(Events.OPTIMIZATION_STEP, logger, reset=False)
-# optimizer.maximize(init_points=2, n_iter=10)
+# load_logs(optimizer, logs=["./results/" + bs_fname], reset = False)
+# optimizer.maximize(init_points=10, n_iter=10)
 
 # training-test-evaluation iterations with best params
 
@@ -235,16 +234,16 @@ targets = [e['target'] for e in optimizer.res]
 best_index = targets.index(max(targets))
 params = optimizer.res[best_index]['params']
 # save best params
-params_fname = f'{model_name}_TaxiBJ_residui_attention_params.json'
+params_fname = f'{model_name}_TaxiNYC_residui_attention_params.json'
 #params_fname = 'model3_TaxiBJ_best_params.json'
 with open(os.path.join('results', params_fname), 'w') as f:
     json.dump(params, f, indent=2)
 with open(os.path.join('results', params_fname), 'r') as f:
     params = json.load(f)
-for i in range(0, 10):
-    train_model(encoder_blocks=params['encoder_blocks'],
-                lr=params['lr'],
-                batch_size=params['batch_size'],
-                kernel_size=params['kernel_size'],
-                save_results=True,
-                i=i)
+#for i in range(0, 10):
+#    train_model(encoder_blocks=params['encoder_blocks'],
+#                lr=params['lr'],
+#                batch_size=params['batch_size'],
+#                kernel_size=params['kernel_size'],
+#                save_results=True,
+#                i=i)

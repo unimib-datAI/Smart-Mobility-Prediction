@@ -18,7 +18,7 @@ from src import (
     model3 as m3,
     model3attention as m3attention,
     #model3resunit as m3resunit,
-    model3resunit_doppia_attention as m3resunitattention,
+    streednet as m3resunitattention,
     model4 as m4,
     model5 as m5,
     model6 as m6
@@ -49,7 +49,7 @@ np.random.seed(1234)
 tf.random.set_seed(1234)
 
 # parameters
-model_name = 'model3resunit_doppia_attention'  #'model3resunit_attention'
+model_name = 'model3resunit_doppia_attention'  #'streednet'
 
 DATAPATH = '../data'
 nb_epoch = 150  # number of epoch at training stage
