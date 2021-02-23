@@ -1,5 +1,5 @@
 # Smart Mobility Prediction
-This repository has been created for a university thesis at Università Bicocca in Milan. It contains the implementation and testing code of different deep networks for the traffic flow prediction problem.
+This repository <!-- has been created for a university thesis at Università Bicocca in Milan. It --> contains the implementation and testing code of different deep networks for the traffic flow prediction problem.
 
 ## Repository structure
 Each of the main folders is dedicated to a specific deep learning network. Some of them were taken and modified from other repositories associated with the source paper, while others are our original implementations. Here it is an exhaustive list:
