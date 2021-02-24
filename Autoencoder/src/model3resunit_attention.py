@@ -1,14 +1,3 @@
-'''
-Channel_attention:
-- utilizzo sia average sia del max_poling pesati opportunamente
-- la struttura segue il paper 'Attention-Based Deep Ensemble Net for Large-Scale Online Taxi-Hailing Demand Prediction'
-
-Channel_attention:
-- utilizzo sia average sia del max_poling pesati opportunamente
-- la struttura segue il paper 'CBAM: Convolutional Block Attention Module'
-'''
-
-
 import tensorflow as tf
 from keras.models import Model
 from keras.layers import (
