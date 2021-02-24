@@ -56,7 +56,7 @@ def spatial_attention(x):
     delta = tf.Variable(tf.zeros(h2.shape[1:], dtype=tf.dtypes.float32), trainable=True, name="delta", shape=tf.TensorShape(h2.shape[1:]))
     h3 = gamma * h1 + delta * h2
     h3 = tf.reshape(h3, shape=[batch_size, height, width, 1])
-    h4 = conv_sigmoid(h3, 1, kernel=7, stride=1) # il 7 come kernel size è stato impostato da loro
+    h4 = conv_sigmoid(h3, 1, kernel=4, stride=1) 
     return x * h4
 
 
