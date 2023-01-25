@@ -40,10 +40,10 @@ def load_meteorol(timeslots, datapath):
 
     fname=os.path.join(datapath, 'TaxiNYC', 'NY_Meteorology.h5')
     f = h5py.File(fname, 'r')
-    Timeslot = f['date'].value
-    WindSpeed = f['WindSpeed'].value
-    Weather = f['Weather'].value
-    Temperature = f['Temperature'].value
+    Timeslot = np.array(f['date'])
+    WindSpeed = np.array(f['WindSpeed'])
+    Weather = np.array(f['Weather'])
+    Temperature = np.array(f['Temperature'])
     f.close()
 
     M = dict()  # map timeslot to index

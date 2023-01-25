@@ -2,4 +2,5 @@ __pycache__/
 .vscode/
 STAR3D/
 .idea/
-STDN/
+STDN/data
+STDN/hdf5s

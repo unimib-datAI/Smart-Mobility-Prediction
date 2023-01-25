@@ -6,7 +6,7 @@ import keras
 from keras import backend as K
 from keras.models import Model, Sequential, load_model
 from keras.layers import Dense, Activation, concatenate, Input, Conv2D, Reshape, Flatten, Dropout, BatchNormalization, Concatenate, LSTM
-from keras.optimizers import Adam, RMSprop
+from tensorflow.keras.optimizers import Adam, RMSprop
 from keras.callbacks import EarlyStopping, Callback, ModelCheckpoint
 import ipdb
 import attention

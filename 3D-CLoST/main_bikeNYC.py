@@ -4,6 +4,7 @@ import _pickle as pickle
 import numpy as np
 import math
 import h5py
+from fvcore.nn import FlopCountAnalysis
 
 import tensorflow as tf
 from keras import backend as K

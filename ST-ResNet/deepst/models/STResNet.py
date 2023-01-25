@@ -101,7 +101,12 @@ def stresnet(c_conf=(3, 2, 32, 32), p_conf=(3, 2, 32, 32), t_conf=(3, 2, 32, 32)
         h1 = Dense(nb_flow * map_height * map_width)(embedding)
         activation = Activation('relu')(h1)
         external_output = Reshape((nb_flow, map_height, map_width))(activation)
+        print('dimensioni external output', external_output.shape)
+        print('dimensioni main output', main_output.shape)
+
         main_output = Add()([main_output, external_output])
+        print('dimensioni main output post add', main_output.shape)
+
     else:
         print('external_dim:', external_dim)
 

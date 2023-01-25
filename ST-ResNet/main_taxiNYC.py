@@ -11,7 +11,7 @@ import json
 
 import tensorflow as tf
 from keras import backend as K
-from keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 from deepst.models.STResNet import stresnet
@@ -65,7 +65,8 @@ def build_model(len_closeness, len_period, len_trend, nb_flow, map_height, map_w
                      external_dim=external_dim, nb_residual_unit=nb_residual_unit, bn=bn, bn2=bn2)
     adam = Adam(lr=lr)
     model.compile(loss='mse', optimizer=adam, metrics=[metrics.rmse])
-    # model.summary()
+    #model.summary()
+    exit()
     if (save_model_pic):
         from keras.utils.vis_utils import plot_model
         plot_model(model, to_file='TaxiNYC_model.png', show_shapes=True)
@@ -76,16 +77,16 @@ def read_cache(fname):
     mmn = pickle.load(open('preprocessing_taxinyc.pkl', 'rb'))
 
     f = h5py.File(fname, 'r')
-    num = int(f['num'].value)
+    num = int(np.array(f['num']))
     X_train, Y_train, X_test, Y_test = [], [], [], []
     for i in range(num):
-        X_train.append(f['X_train_%i' % i].value)
-        X_test.append(f['X_test_%i' % i].value)
-    Y_train = f['Y_train'].value
-    Y_test = f['Y_test'].value
-    external_dim = f['external_dim'].value
-    timestamp_train = f['T_train'].value
-    timestamp_test = f['T_test'].value
+        X_train.append(np.array(f['X_train_%i' % i]))
+        X_test.append(np.array(f['X_test_%i' % i]))
+    Y_train = np.array(f['Y_train'])
+    Y_test = np.array(f['Y_test'])
+    external_dim = np.array(f['external_dim'])
+    timestamp_train = np.array(f['T_train'])
+    timestamp_test = np.array(f['T_test'])
     f.close()
 
     return X_train, Y_train, X_test, Y_test, mmn, external_dim, timestamp_train, timestamp_test
@@ -144,7 +145,8 @@ def train_model(lr, batch_size, residual_units, save_results=False, i=''):
                         save_model_pic=False,
                         lr=lr
                         )
-    # model.summary()
+    #model.summary()
+    exit()
     hyperparams_name = 'TaxiNYC{}.c{}.p{}.t{}.resunits_{}.lr_{}.batchsize_{}'.format(
         i, len_closeness, len_period, len_trend, residual_units,
         lr, batch_size)

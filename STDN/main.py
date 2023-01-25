@@ -4,13 +4,15 @@ import keras
 import numpy as np
 # import xgboost as xgb
 import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
+from tensorflow.python.keras import backend as K
+#from tensorflow.keras.backend.tensorflow_backend import set_session
 
 import file_loader
 import models
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-set_session(tf.Session(config=config))
+#config = tf.ConfigProto()
+#config.gpu_options.allow_growth = True
+sess = tf.compat.v1.Session()
+#K.set_session(sess())
 from keras.callbacks import EarlyStopping
 import datetime
 import argparse
@@ -66,19 +68,26 @@ def eval_lstm(y, pred_y, threshold):
     dropoff_y = y[:, 1]
     pickup_pred_y = pred_y[:, 0]
     dropoff_pred_y = pred_y[:, 1]
-    pickup_mask = pickup_y > threshold
-    dropoff_mask = dropoff_y > threshold
+    pickup_mask = pickup_y > 10
+    dropoff_mask = dropoff_y > 10
     # pickup part
-    if np.sum(pickup_mask) != 0:
-        avg_pickup_mape = np.mean(np.abs(pickup_y[pickup_mask] - pickup_pred_y[pickup_mask]) / pickup_y[pickup_mask])
-        avg_pickup_rmse = np.sqrt(np.mean(np.square(pickup_y[pickup_mask] - pickup_pred_y[pickup_mask])))
+    #if np.sum(pickup_mask) != 0:
+    avg_pickup_mape = np.mean(np.abs(pickup_y[pickup_mask] - pickup_pred_y[pickup_mask]) / pickup_y[pickup_mask])
+    avg_pickup_rmse = np.sqrt(np.mean(np.square(pickup_y - pickup_pred_y)))
     # dropoff part
-    if np.sum(dropoff_mask) != 0:
-        avg_dropoff_mape = np.mean(
+    #if np.sum(dropoff_mask) != 0:
+    avg_dropoff_mape = np.mean(
             np.abs(dropoff_y[dropoff_mask] - dropoff_pred_y[dropoff_mask]) / dropoff_y[dropoff_mask])
-        avg_dropoff_rmse = np.sqrt(np.mean(np.square(dropoff_y[dropoff_mask] - dropoff_pred_y[dropoff_mask])))
+        #avg_dropoff_rmse = np.sqrt(np.mean(np.square(dropoff_y[dropoff_mask] - dropoff_pred_y[dropoff_mask])))
+    avg_dropoff_rmse = np.sqrt(np.mean(np.square(dropoff_y - dropoff_pred_y)))
 
-    return (avg_pickup_rmse, avg_pickup_mape), (avg_dropoff_rmse, avg_dropoff_mape)
+    # all insieme
+    idx = y > 10
+    avg_mape = np.mean(np.abs(y[idx] - pred_y[idx]) / y[idx])
+    avg_rmse = np.sqrt(np.mean(np.square(y - pred_y)))
+
+
+    return (avg_pickup_rmse, avg_pickup_mape), (avg_dropoff_rmse, avg_dropoff_mape), (avg_rmse, avg_mape)
 
 
 def main(batch_size=64, max_epochs=100, validation_split=0.2, early_stop=EarlyStopping()):
@@ -116,12 +125,18 @@ def main(batch_size=64, max_epochs=100, validation_split=0.2, early_stop=EarlySt
                                                                           cnn_nbhd_size=args.cnn_nbhd_size)
         y_pred = model.predict( \
             x=att_cnnx + att_flow + att_x + cnnx + flow + [x, ], )
-        threshold = float(sampler.threshold) / sampler.config["volume_train_max"]
+        threshold = float(sampler.threshold) #/ sampler.config["volume_train_max"]
+
+        y_pred = y_pred * sampler.config["flow_train_max"]
+        y = y * sampler.config["flow_train_max"]
+        
         print("Evaluating threshold: {0}.".format(threshold))
-        (prmse, pmape), (drmse, dmape) = eval_lstm(y, y_pred, threshold)
+        (prmse, pmape), (drmse, dmape), (rmse, mape) = eval_lstm(y, y_pred, threshold)
         print(
             "Test on model {0}:\npickup rmse = {1}, pickup mape = {2}%\ndropoff rmse = {3}, dropoff mape = {4}%".format(
                 args.model_name, prmse, pmape * 100, drmse, dmape * 100))
+
+        print(rmse, mape)
 
         currTime = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         model.save(model_hdf5_path + args.model_name + currTime + ".hdf5")
