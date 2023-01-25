@@ -4,3 +4,6 @@ STAR3D/
 .idea/
 STDN/data
 STDN/hdf5s
+ATFM/data
+ATFM/pretrained
+ATFM/logs
